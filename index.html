@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>大首页推荐 · 内容实验效果分析</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #f8f9fb;
+      --border: #e5e7eb;
+      --text: #111827;
+      --text-secondary: #4b5563;
+      --text-tertiary: #6b7280;
+      --accent: #2563eb;
+      --success: #059669;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --info-bg: #eff6ff;
+      --success-bg: #ecfdf5;
+      --warning-bg: #fffbeb;
+      --max-w: 960px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 32px 20px 64px;
+    }
+
+    .page { max-width: var(--max-w); margin: 0 auto; }
+
+    h1 { font-size: 1.75rem; font-weight: 600; margin-bottom: 8px; }
+    h2 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    h3 { font-size: 0.9375rem; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); }
+
+    .subtitle { color: var(--text-secondary); font-size: 0.9375rem; margin-bottom: 24px; }
+    .caption { color: var(--text-tertiary); font-size: 0.8125rem; margin-top: 8px; }
+    p { margin-bottom: 12px; color: var(--text-secondary); font-size: 0.9375rem; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 24px 0;
+    }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .stat-value { font-size: 1.5rem; font-weight: 600; }
+    .stat-value.info { color: var(--accent); }
+    .stat-value.success { color: var(--success); }
+    .stat-value.warning { color: var(--warning); }
+    .stat-label { font-size: 0.8125rem; color: var(--text-tertiary); margin-top: 4px; }
+
+    .callout {
+      border-radius: 8px;
+      padding: 16px;
+      margin: 20px 0;
+      border: 1px solid var(--border);
+    }
+    .callout.info { background: var(--info-bg); border-color: #bfdbfe; }
+    .callout.success { background: var(--success-bg); border-color: #a7f3d0; }
+    .callout.warning { background: var(--warning-bg); border-color: #fde68a; }
+    .callout-title { font-weight: 600; font-size: 0.875rem; margin-bottom: 6px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      margin: 12px 0;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      color: var(--text-tertiary);
+      font-weight: 500;
+      font-size: 0.8125rem;
+    }
+
+    td.num, th.num { text-align: right; }
+    tr.highlight td:first-child { border-left: 3px solid var(--accent); }
+
+    .positive { color: var(--success); }
+    .negative { color: var(--warning); }
+
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin: 16px 0;
+    }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+      font-size: 0.8125rem;
+    }
+
+    .bar-label { width: 72px; flex-shrink: 0; color: var(--text-secondary); }
+    .bar-track {
+      flex: 1;
+      height: 24px;
+      background: #eef0f3;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      min-width: 36px;
+    }
+    .bar-fill.info { background: var(--accent); color: #fff; }
+    .bar-fill.neutral { background: #9ca3af; color: #fff; }
+    .bar-fill.success { background: var(--success); color: #fff; }
+    .bar-fill.warning { background: var(--warning); color: #fff; }
+
+    .ref-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--success);
+      opacity: 0.8;
+    }
+
+    .divider { height: 1px; background: var(--border); margin: 32px 0; }
+
+    .footer {
+      margin-top: 48px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      color: var(--text-tertiary);
+      font-size: 0.8125rem;
+    }
+
+    @media print {
+      body { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>大首页推荐 · 内容实验效果分析</h1>
+    <p class="subtitle">
+      分析对象：内容实验组 6–9（4 桶）。对比：① 内容实验 vs 房源投放 0–5；② 内容实验 vs 对照 0–2。
+    </p>
+
+    <div class="callout info">
+      <div class="callout-title">核心结论</div>
+      <p style="margin:0;color:var(--text)">
+        内容实验相对房源投放有明显正向：UV CTR +2.18pp（+17%），等曝光商机效率 +19%。
+        相对对照仍有缺口：UV CTR −1.02pp（−6%），等曝光商机 −13%；差距主要在曝光→点击，点击后转化仅低约 7%。
+        实验 9 组已接近对照水平。
+      </p>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value info">14.80%</div>
+        <div class="stat-label">内容实验 UV CTR</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value success">+2.18pp</div>
+        <div class="stat-label">vs 房源投放（12.62%）</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value warning">−1.02pp</div>
+        <div class="stat-label">vs 对照（15.81%）</div>
+      </div>
+    </div>
+
+    <h2>三组基准数据</h2>
+    <p>曝光、点击、商机为各桶算术平均。CTR 与商机效率为加权合并。对照每桶流量更大，绝对商机量不可直接比。</p>
+    <table>
+      <thead>
+        <tr>
+          <th>分组</th>
+          <th class="num">桶数</th>
+          <th class="num">曝光 PV/桶</th>
+          <th class="num">曝光 UV/桶</th>
+          <th class="num">PV CTR</th>
+          <th class="num">UV CTR</th>
+          <th class="num">商机/桶</th>
+          <th class="num">商机/万UV</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="highlight">
+          <td>内容实验 6–9</td>
+          <td class="num">4</td>
+          <td class="num">23.23 万</td>
+          <td class="num">1.64 万</td>
+          <td class="num">4.27%</td>
+          <td class="num">14.80%</td>
+          <td class="num">89</td>
+          <td class="num">54.0</td>
+        </tr>
+        <tr>
+          <td>房源投放 0–5</td>
+          <td class="num">6</td>
+          <td class="num">24.65 万</td>
+          <td class="num">1.74 万</td>
+          <td class="num">3.76%</td>
+          <td class="num">12.62%</td>
+          <td class="num">79</td>
+          <td class="num">45.4</td>
+        </tr>
+        <tr>
+          <td>对照 0–2</td>
+          <td class="num">3</td>
+          <td class="num">33.40 万</td>
+          <td class="num">2.18 万</td>
+          <td class="num">4.42%</td>
+          <td class="num">15.81%</td>
+          <td class="num">135</td>
+          <td class="num">62.0</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="caption">来源：场景内小组转化明细 · 大首页推荐 · CTR = Σ点击 / Σ曝光</p>
+
+    <div class="divider"></div>
+
+    <h2>对比一：内容实验 vs 房源投放</h2>
+    <p>
+      内容实验在点击和商机两个环节都优于房源投放。UV CTR 高 2.18pp（相对 +17%），等曝光商机效率高 8.6/万UV（相对 +19%）。
+      点击后商机转化几乎持平（3.65% vs 3.60%），优势主要来自「更多人愿意点」。
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>指标</th>
+          <th class="num">内容实验</th>
+          <th class="num">房源投放</th>
+          <th class="num">差值</th>
+          <th class="num">相对变化</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>PV CTR</td><td class="num">4.27%</td><td class="num">3.76%</td><td class="num positive">+0.51pp</td><td class="num positive">+14%</td></tr>
+        <tr><td>UV CTR</td><td class="num">14.80%</td><td class="num">12.62%</td><td class="num positive">+2.18pp</td><td class="num positive">+17%</td></tr>
+        <tr><td>点击 UV → 商机</td><td class="num">3.65%</td><td class="num">3.60%</td><td class="num positive">+0.05pp</td><td class="num positive">+1%</td></tr>
+        <tr><td>曝光 UV → 商机</td><td class="num">0.54%</td><td class="num">0.45%</td><td class="num positive">+0.09pp</td><td class="num positive">+19%</td></tr>
+        <tr><td>商机 / 万曝光 UV</td><td class="num">54.0</td><td class="num">45.4</td><td class="num positive">+8.6</td><td class="num positive">+19%</td></tr>
+      </tbody>
+    </table>
+
+    <div class="charts">
+      <div class="chart-card">
+        <h3>UV CTR：内容 vs 房源</h3>
+        <div class="bar-row">
+          <span class="bar-label">内容实验</span>
+          <div class="bar-track"><div class="bar-fill info" style="width:87%">14.80%</div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">房源投放</span>
+          <div class="bar-track"><div class="bar-fill neutral" style="width:74%">12.62%</div></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>商机 / 万曝光 UV</h3>
+        <div class="bar-row">
+          <span class="bar-label">内容实验</span>
+          <div class="bar-track"><div class="bar-fill success" style="width:87%">54.0</div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">房源投放</span>
+          <div class="bar-track"><div class="bar-fill neutral" style="width:73%">45.4</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout success">
+      <div class="callout-title">对房源投放的结论</div>
+      <p style="margin:0;color:var(--text)">内容实验显著优于房源投放。若要在实验组内二选一，内容策略是当前更优方向；房源投放的问题在 CTR，而非点击后转化。</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <h2>对比二：内容实验 vs 对照组</h2>
+    <p>
+      内容实验仍低于对照，但差距可控。UV CTR 低 1.02pp（相对 −6%），等曝光商机低 13%。
+      实验 9 组（UV CTR 15.31%）已接近对照，说明内容策略有逼近对照的潜力。
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>指标</th>
+          <th class="num">内容实验</th>
+          <th class="num">对照</th>
+          <th class="num">差值</th>
+          <th class="num">相对变化</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>PV CTR</td><td class="num">4.27%</td><td class="num">4.42%</td><td class="num negative">−0.15pp</td><td class="num negative">−3%</td></tr>
+        <tr><td>UV CTR</td><td class="num">14.80%</td><td class="num">15.81%</td><td class="num negative">−1.02pp</td><td class="num negative">−6%</td></tr>
+        <tr><td>点击 UV → 商机</td><td class="num">3.65%</td><td class="num">3.92%</td><td class="num negative">−0.27pp</td><td class="num negative">−7%</td></tr>
+        <tr><td>曝光 UV → 商机</td><td class="num">0.54%</td><td class="num">0.62%</td><td class="num negative">−0.08pp</td><td class="num negative">−13%</td></tr>
+        <tr><td>商机 / 万曝光 UV</td><td class="num">54.0</td><td class="num">62.0</td><td class="num negative">−8.0</td><td class="num negative">−13%</td></tr>
+      </tbody>
+    </table>
+
+    <div class="charts">
+      <div class="chart-card">
+        <h3>UV CTR：内容 vs 对照</h3>
+        <div class="bar-row">
+          <span class="bar-label">内容实验</span>
+          <div class="bar-track"><div class="bar-fill info" style="width:93.6%">14.80%</div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">对照</span>
+          <div class="bar-track"><div class="bar-fill success" style="width:100%">15.81%</div></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>商机 / 万曝光 UV</h3>
+        <div class="bar-row">
+          <span class="bar-label">内容实验</span>
+          <div class="bar-track"><div class="bar-fill warning" style="width:87%">54.0</div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">对照</span>
+          <div class="bar-track"><div class="bar-fill success" style="width:100%">62.0</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warning">
+      <div class="callout-title">对对照组的结论</div>
+      <p style="margin:0;color:var(--text)">内容实验未全面超越对照，但差距可控（UV CTR −6%）。漏斗拆解：约一半缺口在曝光→点击，一半在点击→商机。实验 9 组表现最好，可作为后续优化参照。</p>
+    </div>
+
+    <h2>内容实验组内差异</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>桶</th>
+          <th class="num">曝光 UV</th>
+          <th class="num">UV CTR</th>
+          <th class="num">商机</th>
+          <th class="num">商机/万UV</th>
+          <th>备注</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>实验 6 组</td><td class="num">1.62 万</td><td class="num">14.36%</td><td class="num">82</td><td class="num">50.6</td><td>—</td></tr>
+        <tr><td>实验 7 组</td><td class="num">1.65 万</td><td class="num">14.64%</td><td class="num">88</td><td class="num">53.5</td><td>—</td></tr>
+        <tr><td>实验 8 组</td><td class="num">1.64 万</td><td class="num">14.86%</td><td class="num">77</td><td class="num">47.0</td><td>商机效率偏低</td></tr>
+        <tr><td>实验 9 组</td><td class="num">1.67 万</td><td class="num">15.31%</td><td class="num">108</td><td class="num">64.5</td><td>接近/超过对照单桶</td></tr>
+      </tbody>
+    </table>
+
+    <h2>漏斗拆解</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>漏斗步</th>
+          <th class="num">内容实验</th>
+          <th class="num">房源投放</th>
+          <th class="num">对照</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>曝光 UV（合计）</td><td class="num">6.58 万</td><td class="num">10.42 万</td><td class="num">6.55 万</td></tr>
+        <tr><td>点击 UV（合计）</td><td class="num">9732</td><td class="num">1.31 万</td><td class="num">1.04 万</td></tr>
+        <tr><td>UV CTR</td><td class="num">14.80%</td><td class="num">12.62%</td><td class="num">15.81%</td></tr>
+        <tr><td>商机合计</td><td class="num">355</td><td class="num">473</td><td class="num">406</td></tr>
+        <tr><td>点击 UV → 商机</td><td class="num">3.65%</td><td class="num">3.60%</td><td class="num">3.92%</td></tr>
+        <tr><td>曝光 UV → 商机</td><td class="num">0.54%</td><td class="num">0.45%</td><td class="num">0.62%</td></tr>
+      </tbody>
+    </table>
+
+    <h2>建议</h2>
+    <table>
+      <thead>
+        <tr><th>优先级</th><th>动作</th><th>依据</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>P0</td><td>内容实验可继续推进，明显优于房源投放</td><td>UV CTR +17%，等曝光商机 +19%</td></tr>
+        <tr><td>P1</td><td>拆解实验 9 组策略，看能否复用到 6–8 组</td><td>实验 9 组 UV CTR 15.31%、商机/万UV 64.5</td></tr>
+        <tr><td>P2</td><td>针对 vs 对照的 −6% CTR 缺口，查卡片样式/排序/坑位</td><td>点击后转化差距小（−7%），主要优化曝光→点击</td></tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      生成时间：2026-08-14 · 数据口径：场景内小组转化明细 · 大首页推荐
+    </div>
+  </div>
+</body>
+</html>
