@@ -1,9 +1,8 @@
 # 内容卡片周报 · 整体 / 分场景日指标（Locked）
 
 > as of 2026-08-13
-> 项目 SQL：
-> - 整体：`内容生态指标体系/weekly_feed_scene_metrics.sql`
-> - 分场景：`内容生态指标体系/weekly_feed_by_scene_metrics.sql`
+> 项目 SQL：`内容生态指标体系/weekly_feed_scene_metrics.sql`（**仅日明细**）  
+> Excel：`内容生态指标体系/generate_weekly_report_excel.py`（**周度日均**）  
 > 周报表：`内容生态指标体系/内容生态_用户层面_周报_分场景.xlsx`
 
 ## 触发
@@ -16,7 +15,7 @@
 |----|-----|
 | 站点/端 | beike / app |
 | 城市 | `city_code = 110000`（北京） |
-| 窗口 | `pt between '${-7d_pt}' and '${-1d_pt}'`（按需扩窗） |
+| 窗口 | `pt between '${-7d_pt}' and '${-1d_pt}'`（SQL 仅出日明细；周均见 Excel 脚本） |
 | UV 去重键 | **duid** |
 
 ## 场景口径
@@ -24,21 +23,10 @@
 | scene | 中间表 | 曝光 | 点击 | PV |
 |-------|--------|------|------|-----|
 | `content_feed` | `rpt.rpt_content_feed_flow_di` | 94408 / 68193 | 94409 / 68194 | `fb_expo_id × duid` |
-| `homepage_feed` | `rpt.rpt_homepage_feed_flow_di` | **40400 ∩ 54872** + 内容 `card_type` 白名单 | 40397 + 同白名单 | `count(1)` |
+| `homepage_feed` | `rpt.rpt_homepage_feed_flow_di` | **40400 ∩ 54872** + `tab_id = '推荐'` + **card_type 剔除法** | 40397 + 同 tab / 剔除法 | **`fb_expo_id × duid`**（推荐场景；勿再用 `count(1)`） |
 | `search_result` | `rpt.rpt_content_search_result_flow_di` | 80326（`contentFeed`/`contentCardModule`）∪ 93750 | 80327 同 module ∪ 93751 | `fb_expo_id × duid` |
 
-首页内容 `card_type` 白名单（与 `workflow.sql` 一致）：
-
-```
-预算找房, 特色找房, 通勤找房, 低价找房,
-买房故事, 商圈测评, 小区梯度, 小区测评,
-二手房源视频, 业主vlog, 业主自荐,
-小区周边单一模块_4205/4272/4267/4202/4269/4265,
-土拍视频, 楼市新政,
-装修案例, 装修图片, 装修户型解读, 装修小区案例集,
-综合feed装修案例, 家装案例专辑,
-户改图文, 户改视频
-```
+首页 feed 内容卡 **`card_type` 剔除法**（禁止白名单）：`card_type IS NOT NULL` 且不在 35 类非内容黑名单；名单外新类型算内容。完整名单见 [docs/homepage_feed_content_card_filter.md](../docs/homepage_feed_content_card_filter.md)。
 
 ## 整体 vs 分场景
 
@@ -68,18 +56,22 @@ AND (
 - `consume_pv` = `count(1)`
 - 分场景 source：`kandian`/`kanidian` → content_feed；`homepage_feed` → homepage_feed；`search` → search_result
 
-## 输出字段（按日）
+## 输出与周报流程（Locked）
 
-`active_date` [/ `scene`] / `expo_uv` / `click_uv` / `uctr` / `consume_uv` / `consume_pv` / `expo_pv` / `click_pv` / `pctr` / `avg_expo_per_user` / `avg_click_per_user`
+| 步骤 | 产物 | 说明 |
+|------|------|------|
+| 1. SQL | `weekly_feed_scene_metrics.sql` | **仅日粒度** `active_date × scene`；窗口默认近 7 天（`pt between '${-7d_pt}' and '${-1d_pt}'`） |
+| 2. 导出 | 工厂下载 `.xlsx` | 列：`active_date, scene, expo_uv, …` |
+| 3. Excel | `generate_weekly_report_excel.py` | 合并日明细 → 按**周五–周四**算**周度日均** → 写入 `内容生态_用户层面_周报_整体.xlsx` / `分场景.xlsx` |
 
-## 周报 Excel 展示（Locked）
+```bash
+python3 内容生态指标体系/generate_weekly_report_excel.py /path/to/export.xlsx
+```
 
-- 横轴：周度，周五–周四；如 M8W1 = 07.31–08.06，数值 = **周内日均**（UCTR/PCTR = 日率算术平均）
-- 左上角：`北京市`
-- 纵轴两段：
-  1. **用户层面** · 分发：曝光 UV / 点击 UV / UCTR；消费：消费 UV
-  2. **用户×物料层面** · 分发：曝光 PV / 点击 PV / PCTR / 人均曝光 / 人均点击；消费：消费 PV
-- 分场景：每个场景一个 sheet（内容feed / 首页feed / 搜索结果页）
+- **周度日均**（在 Excel 脚本内计算，SQL 不做）：
+  - UV / PV 等计数：周内各日**算术平均**
+  - UCTR / PCTR / 人均曝光 / 人均点击：各日率**算术平均**
+- 横轴：最近 5 个完整周（周五–周四），表头为 `MM.DD-MM.DD`
 
 ## 注意
 

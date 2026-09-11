@@ -10,7 +10,10 @@
 | [page_sj_by_adid.md](page_sj_by_adid.md) | 页面商机（按 adid 展位；三次握手可选） |
 | [deal_ershou_xinfang.md](deal_ershou_xinfang.md) | 新二成交用户日清单（ucid + type + sign_date） |
 | [show_ershou_xinfang.md](show_ershou_xinfang.md) | 新二有效带看用户日清单（ucid + type + showing_date） |
+| [sj_show_matched_daily.md](sj_show_matched_daily.md) | 商机带看量（人店匹配·按带看日 × 业务线） |
+| [sj_deal_matched_daily.md](sj_deal_matched_daily.md) | 商机成交量（人店匹配·按成交日 × 业务线） |
 | [sj_attribution_by_scene.md](sj_attribution_by_scene.md) | 商机溯源（uicode / ele_app_id + 步长） |
+| [content_sj_from_intermediate.md](content_sj_from_intermediate.md) | 内容商机（三类中间表；分类型可重叠） |
 | [p2c_dau_etl.md](p2c_dau_etl.md) | P2C DAU 底表 |
 | [p2c_entry_funnel.md](p2c_entry_funnel.md) | P2C 入口曝光点击 |
 | [p2c_chat_detail.md](p2c_chat_detail.md) | P2C 会话明细 ETL |
@@ -21,5 +24,6 @@
 | [ershou_push_huxing_card_ctr.md](ershou_push_huxing_card_ctr.md) | 点后推二导新户型卡：搜索结果页+二手首页 CTR（流量底表） |
 | [homepage_feed_material_ctr.md](homepage_feed_material_ctr.md) | 首页feed 一级×二级物料 PCTR/UCTR |
 | [content_weekly_scene_metrics.md](content_weekly_scene_metrics.md) | 内容卡片周报：整体/分场景日指标 + Excel 表样 |
+| [curator_distribution_daily.md](curator_distribution_daily.md) | 主理人内容分发日指标（中间表版 / 底表版） |
 
 新增模板时在此注册，并在 [SKILL.md](../SKILL.md) Locked Templates 表同步。

@@ -94,4 +94,4 @@ rpt.rpt_shh_show_showing_housedel_info_da.custdel_id
 
 ## Metrics referencing this table
 
-- [metrics/commerce.md](../metrics/commerce.md)「新二带看」
+- [metrics/commerce.md](../metrics/commerce.md)「新二带看」「商机带看量」

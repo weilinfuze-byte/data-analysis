@@ -15,18 +15,22 @@ description: 贝壳 Hive SQL 取数规范与数据字典。写 SQL、查表字�
 
 - 表名格式：`{layer}.{table}`，如 `rpt.rpt_log_bi_user_behivor_detail_flow_di`
 - **分区必带**：`pt = '${-1d_pt}'` 或 `pt between 'YYYYMMDD000000' and '${-1d_pt}'`
+- **da 快照表**（表名 `_da`，如商机明细）：`pt = '${-1d_pt}'` 取最新全量快照，业务日用 `occur_date` 等事实日期过滤。历史窗口写 `occur_date <= ...`，**禁止**对 da 表 `pt <=` 扫多分区
 - **禁止**不带 pt 扫全表
 - 底表 ETL 必须带 Tez 加速 set 块（见下方）
-- 两层架构：【看板底表】`insert overwrite table rpt.rpt_xxx_di partition (pt=...)` → 【看板模型】`SELECT ... AS \`中文列名\``
-- **建表 / DDL**：见配套 skill [create-hive-table](../create-hive-table/SKILL.md)（DDL 注释写文件头；INSERT 在最终 SELECT 前）
+- 两层架构：【看板底表】`insert overwrite table rpt.rpt_xxx_di partition (pt=...)` → 【看板模型】`SELECT ... AS "中文列名"`（QE 用双引号）
+- **建表 / DDL**：见配套 skill [create-hive-table](../create-hive-table/SKILL.md)。**默认只写 `.sql` 文件**（DDL 注释写文件头；INSERT 在最终 SELECT 前），用户自己去数据工厂建表；**未明确要求操作工厂 UI 时禁止**开浏览器代填。建表交付用 `open_resource` 打开 `.sql`，不要优先开 `.md`
 - **SQL 书写风格**（硬规则）：见 [docs/sql-style.md](docs/sql-style.md)
   - SELECT 字段逗号前置（写在下一行字段前）
-  - CTE 衔接：`)` 换行后 `,name AS (`（逗号在下一 CTE 名前；禁止 `),\n,` 双逗号）
+  - CTE：`name AS` 换行后再 `(`（禁止 `AS (` 同行）；衔接为 `)\n,name AS\n(`（逗号在下一 CTE 名前；禁止 `),\n,` 双逗号）
   - 表别名统一 `t1` / `t2` / `t3`…
   - 结果列名用英文；优先 `LEFT JOIN`
-  - **非建表直接查数**：中文别名只用反引号 `` AS `中文` ``，**禁止**双引号 `AS "中文"`
+  - **看板模型**：中文别名用双引号 `AS "中文"`；**非建表直接查数**：只用反引号 `` AS `中文` ``
+  - **禁止擅自 cast**：按字典类型写比较/字面量；未经用户要求不要 `cast(city_id AS string)` 等「保险转换」
 - 写 SQL 前必须先查 tables/、metrics/、events/，禁止猜字段名
 - **内容生态取数：中间表优先**（硬规则）：字典已有该场景中间表时，分发 / 消费 / 周报 / 物料 CTR **先扫中间表**，禁止默认扫 `rpt.rpt_comm_log_beike_exp_detail_di` / `rpt.rpt_log_bi_user_behivor_detail_flow_di`。例外：Locked 模板明确写「走底表」（如点后推二导新户型卡），或该页面尚未建中间表。中间表索引见 [tables.md](tables.md)
+- **中间表预解析字段：直接用表列**（硬规则，2026-08 confirmed）：内容生态 `rpt_*_flow_di` 已在 ETL 从 `action` 预解析落表（如 `tab_id`、`show_card_type`、`card_type`、`fb_expo_id`、`content_id`、`tab_name`、`module_type` 等），**全量分区已回刷**。下游 SQL **只读表字段**，禁止 `nvl(表字段, get_json_object(action,'$.xxx'))` 兜底，禁止对中间表再 `get_json_object` 取已落表字段。例外：扫底表且字段未落表时仍用 `get_json_object`；`action` 中未预解析的字段按表字典处理。详见 [docs/sql-style.md](docs/sql-style.md) §9
+- **内容商机：中间表优先**（硬规则）：字典已有 `rpt.rpt_content_sj_trans_detail_da` 时，禁止再对 `rpt_asm_sj_trans_detail_da` 自己 UNION 展位/溯源/保护。打标**不要求** `parent_scene_id`。口径见 [metrics/commerce.md](metrics/commerce.md)
 - 本地字典没有的表，先查内部表检索：`http://factory.data.ke.com/tableSearch`
 - 若内部表检索需要登录，唤起 Cursor 内置浏览器，并提示用户在前端完成 SSO 登录；不要索要账号密码
 - **查表权限 / 申请查询·开发权限**：见配套 skill [hive-table-permission](../hive-table-permission/SKILL.md)
@@ -56,7 +60,7 @@ set hive.auto.convert.join.noconditionaltask.size = 500000000;
 
 **禁止**再加 `set hive.cte.materialize.threshold=...`（本集群不支持，SET 阶段直接报错）。
 
-## 写 SQL 前必问的 4 维度
+## 写 SQL 前必问的维度
 
 若用户未指定，**必须询问**，不要假设默认值：
 
@@ -68,6 +72,8 @@ set hive.auto.convert.join.noconditionaltask.size = 500000000;
 | 日期 | 昨天 / 近 7 天 / 固定窗口 |
 
 不要默认查全历史；除非用户明确要求，限制在最近 30 天或 6 个月内。
+
+**首页feed AB / 内容占比实验（额外硬规则）**：对照/实验组 ↔ `fb_combine_ab_test_id` **会变**，字典不写死默认桶。写 SQL 前必须确认：各角色完整编码列表、是否并 `all-reco-*`、tab/服务线/版本、曝光与 PV 口径。见 [dimensions.md](dimensions.md)。**禁止**默默复用项目里旧 `ab_daily_metrics.sql` 的桶映射。
 
 ## duid 与 ucid（硬规则）
 
@@ -82,6 +88,16 @@ set hive.auto.convert.join.noconditionaltask.size = 500000000;
 - 一个账号可以在多个设备登录
 
 **人数 / UV 口径变更（2026-08 confirmed）**：所有人数指标统一改为 **`duid` 去重**（含内容生态：卡片曝光/点击人数、内容消费人数、留存/复访等）。原先用 `ucid` 去重的历史口径已废弃，新 SQL 不要继续用 `ucid` 算 UV。
+
+## 内容生产人 → 员工表（硬规则）
+
+`rpt.rpt_feed_content_analyze_table.im_ucid` = `rpt.rpt_comm_agent_allinfo_employee_da.employee_ucid`。
+
+- **只用 `im_ucid`**（经纪人 ucid）
+- **禁止** `admin_ucid`（贝壳号管理员，关联员工表实测 0% 命中）
+- **禁止** `coalesce(admin_ucid, im_ucid)` 兜底
+
+校验与空值覆盖见 [tables/feed_content_analyze_table.md](tables/feed_content_analyze_table.md)。员工表字段见 [tables/comm_agent_allinfo_employee_da.md](tables/comm_agent_allinfo_employee_da.md)。
 
 ## 去重键规范（硬规则）
 
@@ -138,6 +154,12 @@ client_app_version, city_code, city_name, business_name
 **禁止**：
 - 未读字典就写 evt_id / uicode 过滤
 - 内容生态已有中间表时仍去扫曝光/行为底表（点后推等 Locked「走底表」模板除外）
+- 中间表已预解析字段仍写 `nvl(表字段, get_json_object(action,'$.xxx'))` 或对中间表 `get_json_object` 取已落表列（如 `tab_id`、`show_card_type`、`card_type`）
+- 内容商机已有中间表时仍对商机明细 UNION 三类，或用 `parent_scene_id` 当类型过滤
+- 内容生产表用 `admin_ucid` 或 `coalesce(admin_ucid, im_ucid)` 关联员工表
+- 首页feed AB **未确认桶映射**就照抄历史 `exp-386 group0–9` / 「勿并 all-reco」等旧默认
+- 对 da 快照表写 `pt <=` 扫历史分区（应用 `occur_date` 过滤）
+- 禁止擅自 `cast` 改字段类型（按字典写字面量；未经用户要求不要「保险转换」），见 [sql-style.md](docs/sql-style.md) §2.2
 - 用 `active_date` 切换 uicode / evt_id（发版日只作注释；新旧并行用 `IN` 全集，见 [app-version-uicode-migration.md](docs/app-version-uicode-migration.md)）
 - metrics/ 已有标准定义时自行发明公式
 - 未验证数据存在就写完整分析框架
@@ -162,8 +184,11 @@ client_app_version, city_code, city_name, business_name
 | N 日留存 / 复访 | [templates/retention_fufang.md](templates/retention_fufang.md) |
 | 页面商机（按 adid 展位） | [templates/page_sj_by_adid.md](templates/page_sj_by_adid.md) |
 | 商机溯源（uicode / ele_app_id） | [templates/sj_attribution_by_scene.md](templates/sj_attribution_by_scene.md) |
+| 内容商机（三类中间表） | [templates/content_sj_from_intermediate.md](templates/content_sj_from_intermediate.md) |
 | 新二成交用户日清单 | [templates/deal_ershou_xinfang.md](templates/deal_ershou_xinfang.md) |
 | 新二有效带看用户日清单 | [templates/show_ershou_xinfang.md](templates/show_ershou_xinfang.md) |
+| 商机带看量（人店匹配·按带看日） | [templates/sj_show_matched_daily.md](templates/sj_show_matched_daily.md) |
+| 商机成交量（人店匹配·按成交日） | [templates/sj_deal_matched_daily.md](templates/sj_deal_matched_daily.md) |
 | P2C DAU 底表 | [templates/p2c_dau_etl.md](templates/p2c_dau_etl.md) |
 | P2C 入口曝光点击 | [templates/p2c_entry_funnel.md](templates/p2c_entry_funnel.md) |
 | P2C 会话明细 | [templates/p2c_chat_detail.md](templates/p2c_chat_detail.md) |
@@ -175,6 +200,7 @@ client_app_version, city_code, city_name, business_name
 | 点后推二导新户型卡 CTR（搜索+二手首页，流量底表） | [templates/ershou_push_huxing_card_ctr.md](templates/ershou_push_huxing_card_ctr.md) |
 | 首页feed物料 PCTR/UCTR（一级×二级） | [templates/homepage_feed_material_ctr.md](templates/homepage_feed_material_ctr.md) |
 | 内容卡片周报（整体/分场景日指标） | [templates/content_weekly_scene_metrics.md](templates/content_weekly_scene_metrics.md) |
+| 主理人内容分发日指标（中间表/底表） | [templates/curator_distribution_daily.md](templates/curator_distribution_daily.md) |
 
 ## 输出规范
 

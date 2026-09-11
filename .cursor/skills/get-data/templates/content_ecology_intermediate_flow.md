@@ -1,6 +1,6 @@
 # 内容生态流量中间表 ETL（Locked）
 
-> as of 2026-08-13。底表太大，先落中间表再分析。
+> as of 2026-09-11。底表太大，先落中间表再分析。
 > 完整 SQL：`内容生态指标体系/content_detail_flow.sql`、`search_result_flow.sql`、`content_feed_flow.sql`、`homepage_feed_flow.sql`、`content_ershou_detail_flow.sql`、`content_resblock_detail_flow.sql`
 > App 发版 / 新旧 uicode 并行：`docs/app-version-uicode-migration.md`（**禁止**用 `active_date` 切 uicode/evt）
 
@@ -8,7 +8,7 @@
 
 - 范围：WHERE 过滤 `site=beike`，`dp=app`
 - 底表：行为 `rpt_log_bi_user_behivor_detail_flow_di` + 曝光 `rpt_comm_log_beike_exp_detail_di`
-- 写法：先 `click_raw` / `expo_raw` 收窄 → 再 `UNION ALL` 分流（**禁止** WHERE 嵌套 OR）
+- 写法：先 `click_raw` / `expo_raw` 收窄 → 再 `UNION ALL`（内容详情页不限 source；其他中间表按各自模板分流，**禁止** WHERE 嵌套 OR）
 - Tez：标准 5 行 set 块；**禁止** `hive.cte.materialize.threshold`
 - SELECT 透传：行为表 `t1.dp`/`t1.site`；曝光表 `t1.dp` + `'beike' AS site`；**禁止** `,'app' AS dp`
 - 曝光侧：`is_dau` 置 null
@@ -25,22 +25,22 @@ lower(uicode) IN (
     'community/shipindetail'   -- 视频
     ,'new_kandian_article'     -- 图文
     ,'hangqing_content_app'     -- 行情
+    ,'jiaoyi_gushi'             -- 交易故事
+    ,'sunshine_content'         -- 二手日照原生
+    ,'usershowing_detail'       -- 相似的人
     ,'csxx_light'               -- 新房日照
-    ,'csxx_3ddetailpage'        -- 新房航拍（仅这一个 uicode）
-    ,'lightshadow'              -- 二手日照
+    ,'csxx_3ddetailpage'        -- 新房航拍
+    ,'lightshadow'              -- 二手日照 H5
     ,'overall'                  -- 二手航拍
     ,'panorama1'                -- 小区漫游
 )
 ```
 
-### UNION 分流规则
+### 加工规则
 
-| 分支 | uicode | source（`$.source`） |
-|------|--------|----------------------|
-| 视频/图文/行情 | shipindetail / new_kandian_article / hangqing_content_app | 不限 |
-| 新房日照/航拍 | csxx_light / csxx_3ddetailpage | zonghesousuo_jieguo, homepage1, new_kandian_homepage |
-| 二手日照/航拍 | lightshadow / overall | c_resblock_detail, c_house_detail |
-| 小区漫游 | panorama1 | zonghesousuo_jieguo, homepage1, new_kandian_homepage, c_resblock_detail |
+- `click_raw` / `expo_raw` 按上表 uicode 收窄后 `UNION ALL` 落表
+- **中间表不限** `$.source`；分场景入口过滤见 [tables/content_detail_flow_di.md](../tables/content_detail_flow_di.md)「下游可选 source 限制」
+- **不含家装**物料详情页
 
 表说明：[tables/content_detail_flow_di.md](../tables/content_detail_flow_di.md)
 
@@ -144,19 +144,24 @@ AND evt_id = '40400'
 
 ### 落表 action 预解析（首页 key，≠ 搜索结果页）
 
-| 表字段 | action key |
-|--------|------------|
-| item_type | `$.fb_item_type` |
-| card_type | `$.card_type` |
-| share_media | `$.type` |
-| action_date | `$.action_date` |
-| fb_expo_id | `$.fb_expo_id` |
-| content_id | `$.content_id` |
-| content_tag | `$.content_title` |
-| beike_id | `$.beike_id` |
-| agent_ucid | `$.agent_ucid` |
+| 表字段 | action key | 说明 |
+|--------|------------|------|
+| item_type | `$.fb_item_type` | 原一级分类，兼容保留 |
+| card_type | `$.card_type` | 二级分类 |
+| share_media | `$.type` | |
+| action_date | `$.action_date` | |
+| fb_expo_id | `$.fb_expo_id` | |
+| content_id | `$.content_id` | |
+| content_tag | `$.content_tag` | 2026-09-11 修正；旧版误用 `$.content_title`；未重刷分区仍可能是旧语义 |
+| beike_id | `$.beike_id` | |
+| agent_ucid | `$.agent_ucid` | |
+| **show_card_type** | `$.show_card_type` | **一级分类（现行）**；追加表尾 |
+| **tab_id** | `$.tab_id` | tab名称；追加在 `show_card_type` 之后 |
 
-字段顺序：先 `item_type`，再 `card_type`。
+- 已建表：`ALTER TABLE ... ADD COLUMNS (...)`，禁止删字段/改顺序；若已有 `show_card_type` 则只 ADD `tab_id`
+- 下游一级维度用 `show_card_type`，勿再用 `item_type`；按 tab 用 `tab_id`（主分析默认 **`tab_id = '推荐'`**）
+- **下游分析**（周报 / 物料 CTR 等）：直接用表列，禁止 `nvl(表字段, get_json_object(action,'$.xxx'))`；`show_card_type`/`tab_id` 等字段以已回刷分区为准，见 [sql-style.md](../docs/sql-style.md) §9。**`content_tag` key 变更（2026-09-11）**：仅已重刷分区为 `$.content_tag`；未重刷分区（如 7/8 月）可能仍是旧 `content_title` 语义
+- AB / 内容占比实验：`$.fb_combine_ab_test_id` 完整值 `IN (...)`，禁止 LIKE；**桶列表每次向用户确认**，见 [dimensions.md](../dimensions.md)
 
 表说明：[tables/homepage_feed_flow_di.md](../tables/homepage_feed_flow_di.md)  
 物料 CTR：[templates/homepage_feed_material_ctr.md](homepage_feed_material_ctr.md)
@@ -230,7 +235,7 @@ AND evt_id IN ('28737', '82883')
 
 | 场景 | uicode | 曝光 evt | 点击 evt | action 限制 |
 |------|--------|----------|----------|-------------|
-| 首页feed | homepage1 | **40400 ∩ 54872** | 40397 | 见第四节中间表；内容生态可另加 `$.card_type` 白名单 |
+| 首页feed | homepage1 | **40400 ∩ 54872** | 40397 | 见第四节中间表；内容卡用 `card_type` **剔除法**（见 [homepage_feed_content_card_filter.md](../docs/homepage_feed_content_card_filter.md)） |
 | 二手详情推荐 | ershou/detail | 80579, 87223 | 80580, 87222 | 见第五节中间表 |
 | 小区详情推荐 | communitydetailv2 | 28737, 82883 | 28738, 82884 | 见第六节中间表 |
 

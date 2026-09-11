@@ -40,6 +40,7 @@
 - 与溯源表按 `commercial_id` 关联算溯源商机
 - 用户调研人群筛选
 - 商机溯源分析（配合 [commerce_scene_calculate_distance_di.md](commerce_scene_calculate_distance_di.md)）
+- **内容商机优先扫** [content_sj_trans_detail_da.md](content_sj_trans_detail_da.md)，不要在本表上重复 UNION 三类
 
 ## 页面商机过滤（常用）
 
@@ -53,14 +54,34 @@ WHERE pt = '${-1d_pt}'
 
 完整模板：[templates/page_sj_by_adid.md](../templates/page_sj_by_adid.md)
 
+## commercial_id vs commercial_couple_id（Locked）
+
+| 字段 | 用途 |
+|------|------|
+| `commercial_id` | 表粒度；行级打标 / JOIN（溯源、保护、内容类型） |
+| `commercial_couple_id` | **计数商机对**（PV）；`COUNT(DISTINCT commercial_couple_id)` |
+
+打标用 `commercial_id`，出商机量用 `commercial_couple_id`。不要用 `commercial_id` 去重当商机量。
+
+## da 快照取数
+
+本表是 da 日快照。查数 / ETL：`pt = '${-1d_pt}'`（最新全量）。
+
+| 场景 | 事实日期 |
+|------|----------|
+| 昨天商机 | `occur_date = '${-1d_yyyy-MM-dd}'` |
+| 历史商机（带看/成交匹配） | `occur_date <= '${-1d_yyyy-MM-dd}'` |
+
+**禁止**对 da 表写 `pt <=` 扫历史分区。
+
 ## 转化标记字段（工厂口径）
 
 | 字段 | 含义 | 用法 |
 |------|------|------|
 | `is_commercial_couple` | 是否商机对 | 页面/展位商机常用 `= 1` |
 | `is_del` | **是否转委托** | 勿当成「有效商机」 |
-| `is_show` | 是否转带看 | |
-| `is_deal` | 是否转成交 | |
+| `is_show` | 是否转带看 | 工厂内置标记；≠ [metrics/commerce.md](../metrics/commerce.md)「商机带看量」 |
+| `is_deal` | 是否转成交 | 工厂内置标记；≠ [metrics/commerce.md](../metrics/commerce.md)「商机成交量」 |
 | `is_invalid` | 是否无效商机 | `1`无效 / `0`非无效 / `-911`未知 |
 
 ## 关键字段速查
@@ -70,12 +91,13 @@ WHERE pt = '${-1d_pt}'
 | `pt` | string | 分区字段 | 必带；分区字段标记=是 |
 | `source_key_id` | string | 源主键 id | 主键标记=是；可拆会话 ID 关联三次握手 |
 | `occur_date` / `occur_time` | string | 商机发生日期/时间 | |
-| `commercial_id` | string | 商机唯一主键 id | 表粒度 |
-| `commercial_couple_id` | string | 商机对 id | 商机 PV |
+| `commercial_id` | string | 商机唯一主键 id | 表粒度；打标 / JOIN |
+| `commercial_couple_id` | string | 商机对 id | 商机 PV / 计数 |
 | `cust_ucid` | bigint | 客户 ucid | 商机用户键 |
 | `duid` | string | 数盟 id | 跟流量 DAU 关联 |
 | `adid` | bigint | 广告位 ID | 页面商机过滤常用 |
 | `port` | string | 商机展位 | 工厂字段名；与 adid 区分 |
+| `parent_scene_id` | string | 父场景 id | **内容归因**键（= 详情页 `scene_id`）；**不是**内容商机类型判定条件 |
 | `business_name` | string | 业务线名称 | 见枚举 |
 | `website_name` / `client_name` | string | 网站 / 访问端 | |
 | `commercial_type_code` | bigint | 商机类型编码 | 见枚举 |
@@ -243,3 +265,10 @@ INNER JOIN (
 - 工厂字段：`adid`=广告位ID，`port`=商机展位；写 SQL 过滤页面时沿用历史 `adid`
 - 商机用户键 `cust_ucid`，页面 DAU 常用 `duid`——JOIN 前确认分析单位
 - 三次握手来自 `dw.dw_log_commerce_stream_clue_inf_di`（`data_lables = '["1002"]'`），是商机子集、按需使用
+- da 快照：`pt = 昨天` + `occur_date` 过滤；禁止 `pt <=`
+- `parent_scene_id` 只用于按内容下钻，不要当「是否内容商机」过滤
+
+## 引用本表的指标 / 分析
+
+- [页面商机 / 溯源 / 带看成交](../metrics/commerce.md)
+- [内容商机中间表](content_sj_trans_detail_da.md)

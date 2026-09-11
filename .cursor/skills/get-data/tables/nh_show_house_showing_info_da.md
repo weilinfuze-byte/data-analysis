@@ -4,11 +4,12 @@
 
 ## 来自历史 SQL
 
-<!-- as of 2026-07-31, source: 01 商业分析师/ 历史 SQL（with hefang as.sql / Feed细分人群）；待 factory.data.ke.com 复核字段类型与权限包 -->
+<!-- as of 2026-08-14, source: http://factory.data.ke.com/detail?table_id=1043771 -->
+<!-- as of 2026-07-31, source: 01 商业分析师/ 历史 SQL（with hefang as.sql / Feed细分人群） -->
 
 | 元信息 | 值 |
 |--------|----|
-| 表中文名 | 新房带看（待工厂确认正式中文名） |
+| 表中文名 | 新房带看明细表 |
 | 表类型 | Hive |
 | 数据库 | rpt |
 | 是否分区 | 是 |
@@ -20,7 +21,7 @@
 
 - 新房有效带看用户清单
 - 新二带看 UNION（与二手表按 `custdel_id` 对齐后桥 `ucid`）
-- 与商机、成交按 `ucid` 关联
+- 与商机按 **客户+经纪人** 匹配（见 [metrics/commerce.md](../metrics/commerce.md)「商机带看量」）
 
 ## 必带过滤
 
@@ -34,15 +35,18 @@ WHERE pt = '${-1d_pt}'
 
 ## 核心字段
 
-| 字段 | 类型（待复核） | 含义 | 级别 | 备注 |
-|------|----------------|------|------|------|
-| custdel_id | — | 客源编码 | **关键** | JOIN 客源表 |
-| showing_start_time | — | 带看开始时间 | **关键** | 取 `substr(...,1,10)` 作带看日 |
-| is_valid | — | 是否有效带看 | **关键（过滤）** | 新房侧标准有效过滤；≠ 二手的 `is_showing_valid` |
-| old_showing_create_type | — | 带看创建类型 | **关键（过滤）** | 排除 `'4','5','8'` |
+| 字段 | 类型 | 含义 | 级别 | 备注 |
+|------|------|------|------|------|
+| showing_id | bigint | 带看 id | **关键** | 去重带看次数 |
+| custdel_id | bigint | 中台客源 id | **关键** | JOIN 客源表 |
+| agent_ucid | string | 经纪人 UCID | **关键（匹配）** | 商机带看匹配键；JOIN 前 cast bigint |
+| showing_start_time | string | 带看开始时间 | **关键** | 取 `substr(...,1,10)` 作带看日 |
+| showing_date | string | 带看日期 | 扩展 | 工厂有；标准带看日仍优先 `showing_start_time` |
+| is_valid | int | 是否有效带看 | **关键（过滤）** | 0无效/1有效；≠ 二手 `is_showing_valid` |
+| old_showing_create_type | int | 源带看生成类型 | **关键（过滤）** | 排除 `4/5/8` |
 | pt | string | 分区 | **关键（过滤）** | 必带 |
 
-> 明细扩展字段（`showing_id` / 楼盘等）以工厂字段页为准，未在本字典沉淀前勿凭记忆写入 Locked 模板。
+> 其他：`agent_name` / `channel_ucid`（渠道）/ `operator_id`（操作人）——**勿**当带看经纪人匹配键。
 
 ## JOIN 路径
 
@@ -52,7 +56,9 @@ rpt.rpt_nh_show_house_showing_info_da.custdel_id
     → customer_uid AS ucid
 ```
 
-模板：[templates/show_ershou_xinfang.md](../templates/show_ershou_xinfang.md)
+模板：
+- [templates/show_ershou_xinfang.md](../templates/show_ershou_xinfang.md)
+- [templates/sj_show_matched_daily.md](../templates/sj_show_matched_daily.md)
 
 ## 已知坑
 
@@ -63,4 +69,4 @@ rpt.rpt_nh_show_house_showing_info_da.custdel_id
 
 ## Metrics referencing this table
 
-- [metrics/commerce.md](../metrics/commerce.md)「新二带看」
+- [metrics/commerce.md](../metrics/commerce.md)「新二带看」「商机带看量」

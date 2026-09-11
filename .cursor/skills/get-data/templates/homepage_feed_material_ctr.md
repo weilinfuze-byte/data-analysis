@@ -1,7 +1,8 @@
 # 首页feed · 一级/二级物料 PCTR & UCTR（Locked）
 
-> as of 2026-08-05。完整 SQL：`内容生态指标体系/homepage_feed_material_ctr.sql`
+> as of 2026-08-27。完整 SQL：`内容生态指标体系/homepage_feed_material_ctr.sql`
 > 中间表：[tables/homepage_feed_flow_di.md](../tables/homepage_feed_flow_di.md)
+> **一级分类**：`show_card_type`（现行）；勿用 `item_type`（旧 `fb_item_type`，兼容保留）
 
 ## 口径（硬规则）
 
@@ -9,7 +10,7 @@
 |----|------|
 | 曝光 | `40400 ∩ 54872`（滑动有效曝光）；禁止裸用 40400 |
 | 点击 | `evt_id = 40397` |
-| 一级物料 | `item_type` |
+| 一级物料 | `show_card_type` |
 | 二级物料 | `card_type` |
 | 去重键 | **duid**（内容生态 / Feed 漏斗统一） |
 | PCTR | 点击 PV / 有效曝光 PV |
@@ -33,7 +34,7 @@ WITH scroll_user AS (
 ,expo AS (
     SELECT
         t1.active_date
-        ,t1.item_type          -- Query2 可去掉 card_type
+        ,t1.show_card_type     -- Query2 可去掉 card_type
         ,t1.card_type
         ,COUNT(1) AS expo_pv
         ,COUNT(DISTINCT t1.duid) AS expo_uv
@@ -45,12 +46,12 @@ WITH scroll_user AS (
       AND t1.evt_id = '40400'
       AND t1.duid IS NOT NULL
       AND t1.duid NOT IN ('-911', 'null')
-    GROUP BY t1.active_date, t1.item_type, t1.card_type
+    GROUP BY t1.active_date, t1.show_card_type, t1.card_type
 )
 ,click AS (
     SELECT
         t1.active_date
-        ,t1.item_type
+        ,t1.show_card_type
         ,t1.card_type
         ,COUNT(1) AS click_pv
         ,COUNT(DISTINCT t1.duid) AS click_uv
@@ -59,11 +60,11 @@ WITH scroll_user AS (
       AND t1.evt_id = '40397'
       AND t1.duid IS NOT NULL
       AND t1.duid NOT IN ('-911', 'null')
-    GROUP BY t1.active_date, t1.item_type, t1.card_type
+    GROUP BY t1.active_date, t1.show_card_type, t1.card_type
 )
 SELECT
     t1.active_date
-    ,t1.item_type
+    ,t1.show_card_type
     ,t1.card_type
     ,t1.expo_pv
     ,nvl(t2.click_pv, 0) AS click_pv
@@ -76,9 +77,9 @@ SELECT
 FROM expo t1
 LEFT JOIN click t2
   ON t1.active_date = t2.active_date
- AND nvl(t1.item_type, '') = nvl(t2.item_type, '')
+ AND nvl(t1.show_card_type, '') = nvl(t2.show_card_type, '')
  AND nvl(t1.card_type, '') = nvl(t2.card_type, '')
 ORDER BY t1.expo_pv DESC
 ```
 
-Query2：去掉 `card_type` 分组与 JOIN 条件，仅按 `item_type`。
+Query2：去掉 `card_type` 分组与 JOIN 条件，仅按 `show_card_type`。

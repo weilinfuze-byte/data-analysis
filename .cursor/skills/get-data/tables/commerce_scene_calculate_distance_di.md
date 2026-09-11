@@ -55,15 +55,21 @@ WHERE pt BETWEEN '{start_pt}' AND '${-1d_pt}'
 | `ele_app_id` | string | 父页面元素应用 id | 元素/按钮溯源 |
 | `app_id` | string | 溯源上报场景 | 场景级归因 |
 | `ele_uicode` | string | 父页面元素端 uicode | 细拆 |
-| `ele_param` | string | 父页面元素随路参数 | 细拆 |
-| `ele_parent_scene_id` | string | 父页面元素 id | |
-| `duid` | string | 设备 | |
-| `business_name` | string | 业务线 | |
-| `client_name` | string | 端 | |
-| `adid` | string | adid | 表内有；溯源主口径一般用 uicode/ele_app_id |
-| `is_del` / `is_show` / `is_deal` | int | 转委托/带看/成交 | 可选 |
-| `commercial_scene_id` | string | 商机关联场景 ID | |
-| `scene_id` / `parent_scene_id` | string | 场景链路 | |
+| `ele_param` | string | 父页面元素随路参数 | 细拆；首页feed 常见 map `{"r…":"r…"}` |
+
+### 首页feed 溯源 expo 解析（2026-09）
+
+`ele_param` **经常不是**带 `fb_expo_id` 字段的对象，而是 `{"r1788…":"r1788…"}`（key=value=曝光 id）。
+
+正式解析顺序：
+
+1. `get_json_object(ele_param, '$.fbexpo')` / `$.fb_expo_id`
+2. 否则取 JSON 中**首个**以 `r` 开头的引号串（map 形态）
+3. 与行为表 `fb_expo_id` **同日等值 JOIN**（不挂 duid）
+
+场景过滤：`app_id = 'BU_HomePageFeedAPI' OR ele_app_id = 'BU_HomePageFeedAPI'`。
+
+详见 [metrics/commerce.md](../metrics/commerce.md)「首页feed 内容点击归因商机」。
 
 ## 全字段清单（26）
 

@@ -1,6 +1,6 @@
 # SQL 书写规范
 
-> 本仓库团队 Hive SQL 风格。写取数 / 看板 SQL 时必须遵守。
+> 杨富泽个人 Hive SQL 风格。写取数 / 看板 SQL 时必须遵守。
 
 ## 1. SELECT 字段：逗号前置
 
@@ -64,6 +64,40 @@ SELECT ...
 
 改 SQL 后必须目视检查：每个衔接只能是 `)\n,name AS (`，不能出现 `),\n,`。
 
+## 2.2 字段类型：禁止擅自 cast（硬规则，2026-09-11 confirmed）
+
+**不要**为了「保险」改字段格式（`cast(col AS string/bigint/…)`、`string(col)` 等），**除非用户明确要求**。
+
+| 做法 | 对 / 错 |
+|------|---------|
+| 按字典类型写字面量 | ✅ `city_id = '110000'`（string）；`city_code = 110000`（int/bigint） |
+| 字典已是 string 再 `cast(city_id AS string)` | ❌ |
+| 字典已是 bigint 再 `cast(content_id AS string)` 再和字面量比 | ❌（除非用户要求） |
+| JOIN / 异常值过滤 | ✅ 用字段原生类型；`bigint` 剔 `-911`，不要先转 string 再剔 `'null'` |
+
+跨表 JOIN 两侧类型确不一致时：优先让 **解析结果 / 字面量** 对齐表字段字典类型；确需 `cast` 时只转非表字段侧（如 `get_json_object` 结果），并加一行注释说明原因。
+
+**例外（用户已确认）**：主理人分发等场景对供给表 `rpt.rpt_feed_content_analyze_table.city_id` 写 `cast(city_id AS string) = '110000'`；其它字段仍禁止擅自 cast。见 [curator_distribution_daily.md](../templates/curator_distribution_daily.md)。
+
+## 2.3 注释（硬规则，2026-09-11 confirmed）
+
+工厂 / 查询侧 **禁止** 用 `=` 或 `-` 画分隔线当注释，会报错：
+
+```sql
+-- ❌ 禁止
+-- ============================================================
+-- ========== 曝光 ==========
+-- ------------------------------------------------------------
+```
+
+只用普通说明注释：
+
+```sql
+-- ✅
+-- Project: 主理人内容 · 分发日指标
+-- 内容feed · 曝光
+```
+
 ## 3. 结果列名
 
 看板底表 / 中间查询结果列用英文蛇形命名，例如：
@@ -76,24 +110,26 @@ SELECT ...
 | 卡片点击人数 UV | `click_uv` |
 | 卡片点击率 UCTR | `uctr` |
 
-仅在【看板模型】/ 直接取数查询需要中文展示时，用反引号：`AS \`中文列名\``。
+仅在需要中文展示时给列加中文别名；**看板模型与直接查数引号不同**。
 
-**中文别名引号（硬规则，2026-08 confirmed）**：
+**中文别名引号（硬规则，2026-09-03 修正）**：
 
 | 场景 | 写法 | 说明 |
 |------|------|------|
-| 非建表、直接 `SELECT` 查数 / 看板模型 | `AS \`中文列名\`` | 本集群查询侧不接受双引号别名 |
+| 【看板模型】（BI/QE 挂载） | `AS "中文列名"` | QE 报错：`backquoted identifiers are not supported; use double quotes` |
+| 非建表、工厂/查询侧直接 `SELECT` 查数 | `AS \`中文列名\`` | 查询侧不接受双引号别名 |
 | 建表 DDL 字段定义 | `` `col` string COMMENT '...' `` | 仍用反引号包英文字段名 |
 
 ```sql
--- ✅ 直接取数 / 看板模型
+-- ✅ 看板模型
+SELECT
+    t1.active_date                         AS "活跃日期"
+    ,t1.retain_rate                        AS "内容留存率"
+
+-- ✅ 直接取数（非看板）
 SELECT
     t1.active_date                         AS `活跃日期`
     ,t1.retain_rate                        AS `内容留存率`
-
--- ❌ 禁止（非建表查询会报错）
-SELECT
-    t1.active_date                         AS "活跃日期"
 ```
 
 ## 4. GROUP BY：写具体字段名
@@ -165,7 +201,8 @@ WHERE 里过滤 `site='beike'` / `dp='app'` 可以；SELECT **不要**把有底�
 - 先建滑动用户子查询，再对卡片曝光 `INNER JOIN` 取交集
 - 滑动 `evt_id='54872'`：优先从中间表 `rpt.rpt_homepage_feed_flow_di`；若扫底表则**只从** `rpt.rpt_log_bi_user_behivor_detail_flow_di` 取
 - 去重键：**duid**（内容生态统一）
-- 物料维度：滑动用户集合 JOIN 后再按 `item_type`/`card_type` 聚合；结果按 `expo_pv DESC`
+- **PV（推荐场景硬规则）**：`COUNT(DISTINCT concat(nvl(fb_expo_id,''),'#',duid))`，**禁止** `count(1)`
+- 物料维度：滑动用户集合 JOIN 后再按 `show_card_type`/`card_type` 聚合；结果按 `expo_pv DESC`；一级分类**勿用** `item_type`
 - 需要同时输出分场景与整体时，优先 `GROUP BY GROUPING SETS`，不要额外堆叠 overall 子查询
 
 ```sql
@@ -186,9 +223,9 @@ with scroll_user as (
 ,expo as (
     select
         t1.active_date
-        ,t1.item_type
+        ,t1.show_card_type
         ,t1.card_type
-        ,count(1) as expo_pv
+        ,count(DISTINCT concat(nvl(t1.fb_expo_id, ''), '#', t1.duid)) as expo_pv
         ,count(distinct t1.duid) as expo_uv
     from rpt.rpt_homepage_feed_flow_di t1
     inner join scroll_user t2
@@ -200,7 +237,35 @@ with scroll_user as (
       and t1.duid not in ('-911','null')
     group by
         t1.active_date
-        ,t1.item_type
+        ,t1.show_card_type
         ,t1.card_type
 )
 ```
+
+## 9. 中间表预解析字段：直接用表列（2026-08 硬规则）
+
+内容生态流量中间表（`rpt.rpt_*_flow_di`）在 ETL 阶段已从 `action` 预解析并落表；**全量分区已回刷**。下游分析 / 周报 / 物料 CTR **只读表字段**。
+
+```sql
+-- ✅ 中间表：直接用落表列
+and t1.tab_id = '推荐'
+and t1.show_card_type = '内容'
+and t1.card_type = '买房故事'
+and t1.tab_name = '综合'
+and t1.module_type = 'contentCardModule'
+
+-- ❌ 禁止：nvl + get_json_object 兜底（历史过渡写法，已废弃）
+and nvl(t1.tab_id, get_json_object(t1.action, '$.tab_id')) = '推荐'
+and nvl(t1.show_card_type, get_json_object(t1.action, '$.show_card_type')) = '内容'
+
+-- ❌ 禁止：中间表对已落表字段再 get_json_object
+and get_json_object(t1.action, '$.tab_id') = '推荐'
+```
+
+| 场景 | 写法 |
+|------|------|
+| 扫中间表 `rpt_*_flow_di` | 用表字段（`tab_id`、`show_card_type`、`card_type`、`fb_expo_id`、`content_id`、`tab_name`、`module_type` 等，以各表字典为准） |
+| 扫底表且字段未落表 | `get_json_object(action, '$.xxx')` |
+| `action` 中未预解析的字段 | 按表字典；必要时仍 `get_json_object` |
+
+参考：[templates/search_content_card_ctr.md](../templates/search_content_card_ctr.md)「中间表字段已预解析」；首页 feed 见 [tables/homepage_feed_flow_di.md](../tables/homepage_feed_flow_di.md)。

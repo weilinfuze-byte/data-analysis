@@ -9,7 +9,7 @@
 | `new-analysis` | 新建分析项目（status.md + SQL） |
 | `analysis-method` | 归因 / 漏斗 / 维度拆解 / 实验防坑 |
 | `get-data` | Hive 取数规范 + 表/指标/埋点/模板字典 |
-| `create-hive-table` | 结果底表 DDL / INSERT |
+| `create-hive-table` | 结果底表 DDL / INSERT（默认写 SQL；显式要求才代填工厂） |
 | `hive-table-permission` | 数据工厂查权限、走前端申请 |
 | `analysis-report` | 分析报告写作规范 |
 | `close-project` | 收尾，把可复用知识沉回本目录 |

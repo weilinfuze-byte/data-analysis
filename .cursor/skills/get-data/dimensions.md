@@ -68,11 +68,36 @@
 | Feed 位置 | `get_json_object(action,'$.expo_position')` | Feed 曝光深度 |
 | Feed ID | `get_json_object(action,'$.fb_expo_id')` | Feed 去重曝光 |
 | 房源 id | `get_json_object(action,'$.housedel_id')` | 二手详情页 `ershou/detail` 页面曝光解析房源；用前建议抽样确认 key 名 |
-| 首页feed一级分类 | `get_json_object(action,'$.fb_item_type')` | 落表字段 `item_type`；≠ 搜索竖卡的 `$.item_type` |
+| 首页feed一级分类 | `get_json_object(action,'$.show_card_type')` | 落表字段 `show_card_type`（现行）；旧 `$.fb_item_type`→`item_type` 仅兼容保留 |
+| 首页feed一级分类（旧） | `get_json_object(action,'$.fb_item_type')` | 落表 `item_type`；**勿再当一级分类** |
+| 首页feed tab | 落表 `tab_id`（底表 ETL 时 `get_json_object(action,'$.tab_id')`） | 中间表下游**直接用 `tab_id`**；**推荐 tab 分析默认 `= '推荐'`** |
+| 首页feed AB 标识 | `get_json_object(action,'$.fb_combine_ab_test_id')` | 中间表若未落表则扫 `action`；**禁止 LIKE**，用完整值 `IN (...)` |
+| 首页feed 服务线 | `get_json_object(action,'$.fb_combine_service_id')` | 如 `c006`；是否过滤**每次确认** |
 | 搜索结果页物料类型 | `get_json_object(action,'$.item_type')` | 80326/80327；点后推筛 `'二导新户型卡'` |
 | 首页feed内容体裁 | `get_json_object(action,'$.type')` | 落表字段 `share_media`；≠ 搜索的 `$.share_media` |
 | 首页feed内容id | `get_json_object(action,'$.content_id')` | 落表字段 `content_id`；≠ 搜索竖卡的 `$.fb_item_id` |
 
+### 首页feed AB / 内容占比实验（硬规则：桶映射不写死）
+
+对照 / 内容实验 / 房源实验等**角色 ↔ `fb_combine_ab_test_id` 列表会随放量变化**。字典**不维护默认桶映射**。
+
+写相关 SQL 前**必须先问用户确认**（缺一不可则停）：
+
+| 待确认项 | 说明 |
+|----------|------|
+| 角色桶 | 对照 / 内容实验 / 房源实验…各自包含哪些完整 `fb_combine_ab_test_id` |
+| 是否并入 `all-reco-*` | 可并 / 不可并，以用户当次口径为准 |
+| tab | 仅 `tab_id='推荐'`，还是不限 tab（对齐 reco 大首页 feed） |
+| 服务线 | 是否限 `fb_combine_service_id`（如 `c006`） |
+| 版本 | `client_app_version` 下限 |
+| 曝光口径 | 仅有效 `40400∩54872`，或全量 `40400` + 有效双口径 |
+| PV | `count(1)` 还是 `fb_expo_id×duid` |
+
+字段写法（稳定）：
+
+- **禁止** `LIKE '%exp-386%'`；一律完整字符串 `IN (...)`
+- `54872` 滑动用户集合：**默认不加** `tab_id`（卡片字段常空，加了会掏空交集）——除非用户明确要求
+- 历史一次口径曾写在项目 `首页feed内容占比实验/status.md` / `ab_daily_metrics.sql`，**仅作参考，不可默认复用**；枚举探查可先跑 `fb_combine_ab_test_id` distinct
 ## AB 实验衍生维度
 
 ```sql
@@ -133,22 +158,25 @@ Lower(uicode) IN ('homepage1', 'homepage/ershou_homev2')
 
 剔除（非内容卡片）：二手×房源卡片、新房×新房楼盘、新房×土拍。不要用 `card_type` 白名单。
 
-## 内容详情页 uicode（2026-08 confirmed）
+## 内容详情页 uicode（2026-09 confirmed）
 
-> 中间表：`rpt.rpt_content_detail_flow_di`。完整 source 规则见 [tables/content_detail_flow_di.md](tables/content_detail_flow_di.md)
+> 中间表：`rpt.rpt_content_detail_flow_di`（**新二**内容详情页，不含家装）。中间表**不限** source；可选入口过滤见 [tables/content_detail_flow_di.md](tables/content_detail_flow_di.md)
 
-| 页面 | uicode | source 限制 |
-|------|--------|-------------|
-| 视频详情页 | `community/shipindetail` | 无 |
-| 图文详情页 | `new_kandian_article` | 无 |
-| 行情数据 | `hangqing_content_app` | 无 |
-| 新房日照 | `csxx_light` | 综搜/大首页/新看点 |
-| 新房航拍 | `csxx_3ddetailpage` | 同上 |
-| 二手日照 | `lightshadow` | 小区详情/房源详情 |
-| 二手航拍 | `overall` | 同上 |
-| 小区漫游 | `panorama1` | 综搜/大首页/新看点/小区详情 |
+| 页面 | uicode |
+|------|--------|
+| 视频详情页 | `community/shipindetail` |
+| 图文详情页 | `new_kandian_article` |
+| 行情数据 | `hangqing_content_app` |
+| 交易故事 | `jiaoyi_gushi` |
+| 二手日照原生 | `sunshine_content` |
+| 相似的人 | `usershowing_detail` |
+| 新房日照 | `csxx_light` |
+| 新房航拍 | `csxx_3ddetailpage` |
+| 二手日照 | `lightshadow` |
+| 二手航拍 | `overall` |
+| 小区漫游 | `panorama1` |
 
-source 键：`get_json_object(action,'$.source')`，取值 `zonghesousuo_jieguo` / `homepage1` / `new_kandian_homepage` / `c_resblock_detail` / `c_house_detail`。
+下游分场景时常用 source：`zonghesousuo_jieguo` / `homepage1` / `new_kandian_homepage` / `c_resblock_detail` / `c_house_detail`（键：`get_json_object(action,'$.source')`）。
 
 ## 搜索结果页 tab / module（2026-08 confirmed）
 

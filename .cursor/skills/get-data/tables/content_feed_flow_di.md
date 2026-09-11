@@ -58,7 +58,7 @@
 | `action_date` | 发布时间 | `$.action_date` |
 | `fb_expo_id` | 后端曝光唯一ID | `$.fb_expo_id` |
 | `content_id` | 内容id | `$.article_id` |
-| `content_tag` | 内容标签 | `$.content_title` |
+| `content_tag` | 埋点展示文案（≠ 存量表供给侧 tag） | `$.content_title`；主理人识别见 [feed_content_analyze_table.md](feed_content_analyze_table.md) |
 | `beike_id` | 贝壳号id | `$.beike_id` |
 | `agent_ucid` | 经纪人id | `$.agent_ucid` |
 

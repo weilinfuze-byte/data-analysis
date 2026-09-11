@@ -21,7 +21,7 @@
 | `rpt.rpt_log_bi_user_behivor_detail_flow_di` | 点击/行为/页面浏览 | 349 | [behavior_flow_di.md](tables/behavior_flow_di.md) |
 | `rpt.rpt_comm_log_beike_exp_detail_di` | 贝壳元素曝光 | 124 | [beike_exp_detail_di.md](tables/beike_exp_detail_di.md) |
 | `rpt.rpt_comm_log_lianjia_exp_detail_di` | 链家元素曝光 | 54 | [lianjia_exp_detail_di.md](tables/lianjia_exp_detail_di.md) |
-| `rpt.rpt_content_detail_flow_di` | 内容详情页流量中间表 | — | [content_detail_flow_di.md](tables/content_detail_flow_di.md) |
+| `rpt.rpt_content_detail_flow_di` | 新二内容详情页流量中间表（不含家装） | — | [content_detail_flow_di.md](tables/content_detail_flow_di.md) |
 | `rpt.rpt_content_search_result_flow_di` | 搜索结果页内容流量中间表 | — | [content_search_result_flow_di.md](tables/content_search_result_flow_di.md) |
 | `rpt.rpt_content_feed_flow_di` | 内容feed流量中间表 | — | [content_feed_flow_di.md](tables/content_feed_flow_di.md) |
 | `rpt.rpt_homepage_feed_flow_di` | 首页feed流量中间表 | — | [homepage_feed_flow_di.md](tables/homepage_feed_flow_di.md) |
@@ -30,6 +30,7 @@
 | `rpt.rpt_feed_content_analyze_table` | 内容中台存量内容底表 | — | [feed_content_analyze_table.md](tables/feed_content_analyze_table.md) |
 | `rpt.rpt_log_bi_user_uicode_flow_di` | 页面级 DAU/MAU/停留 | 41 | [uicode_flow_di.md](tables/uicode_flow_di.md) |
 | `rpt.rpt_asm_sj_trans_detail_da` | 商机转化明细表 | 73 | [asm_sj_trans_detail_da.md](tables/asm_sj_trans_detail_da.md) |
+| `rpt.rpt_content_sj_trans_detail_da` | 内容商机明细中间表（三类+全字段） | — | [content_sj_trans_detail_da.md](tables/content_sj_trans_detail_da.md) |
 | `shangyehua.shangyehua_shangyehua_commerce_scene_calculate_distance_di` | 商机溯源（路径步长-关联元素） | — | [commerce_scene_calculate_distance_di.md](tables/commerce_scene_calculate_distance_di.md) |
 
 ## P2C 交易专家
@@ -61,6 +62,14 @@
 | `rpt.rpt_shh_rent_deal_agreement_detail_da` | 二手成交基础信息（买卖靠 del_type 筛） | [shh_rent_deal_agreement_detail_da.md](tables/shh_rent_deal_agreement_detail_da.md) |
 | `rpt.rpt_nh_output_deal_info_online_custdel_da` | 新房成交（线上客源标签） | [nh_output_deal_info_online_custdel_da.md](tables/nh_output_deal_info_online_custdel_da.md) |
 | `rpt.rpt_shh_deal_agreement_da` | 二手成交（房源侧常用） | |
+
+## 员工 / 组织
+
+| 表 | 用途 | Detail |
+|----|------|--------|
+| `rpt.rpt_comm_agent_allinfo_employee_da` | 公司全量员工日快照（职务/组织/上级） | [comm_agent_allinfo_employee_da.md](tables/comm_agent_allinfo_employee_da.md) |
+
+> 旧表 `dw.dw_allinfo_hr_employee_da`、`rpt.rpt_allinfo_hr_employee_da` 待下线/请勿申请，统一用上表。
 
 ## 其他常用表
 
@@ -104,6 +113,15 @@ MAU / 停留 / 月报渗透
 新房成交（custdel_id）+ 客源表（customer_uid）
     ↓ ucid + type + sign_date
 新二成交用户日清单
+
+内容生产表（im_ucid）
+    ↓ 禁止 admin_ucid / coalesce 兜底
+员工表（employee_ucid）→ 组织维（marketing_name / region_name 需业务确认）
+
+内容商机中间表 rpt_content_sj_trans_detail_da
+    ↓ 分类型 COUNT DISTINCT commercial_couple_id（允许重叠）
+    ↓ 按内容拆：parent_scene_id = 详情页 scene_id → content_id
+内容商机量 / 按内容归因
 ```
 
 ## 流量取数三板斧

@@ -32,18 +32,21 @@ and duid not in ('-911','null')
 | 卡片 PCTR | 点击 PV / 曝光 PV |
 | 人均曝光卡片个数 | 曝光 PV / 曝光 UV |
 | 人均点击卡片个数 | 点击 PV / 点击 UV |
-| 首页feed物料 PCTR/UCTR | 按 `item_type`（一级）× `card_type`（二级）；曝光分母为滑动有效曝光；模板 [homepage_feed_material_ctr.md](../templates/homepage_feed_material_ctr.md) |
-| 卡片曝光/点击 PV（内容feed / 搜索内容卡） | `COUNT(DISTINCT concat(nvl(fb_expo_id,''),'#',duid))` —— **fb_expo_id × duid 去重** |
-| 卡片曝光/点击 PV（首页feed） | `COUNT(1)`（有效曝光后） |
+| 首页feed物料 PCTR/UCTR | 按 `show_card_type`（一级）× `card_type`（二级）；曝光分母为滑动有效曝光；模板 [homepage_feed_material_ctr.md](../templates/homepage_feed_material_ctr.md) |
+| 首页feed内容卡（周报/看板） | `tab_id='推荐'` + **card_type 剔除法**（35 类非内容黑名单 + item_type 剔房源/楼盘）；禁止白名单。见 [homepage_feed_content_card_filter.md](../docs/homepage_feed_content_card_filter.md)。**≠** Feed 整盘；整盘 UV 需另取 |
+| 首页feed日常监控日表 | 双曝光（全量+有效）+ 双 PV（`count(1)` + `distinct fb_expo_id`）；见 [active.md](active.md)、项目 `首页feed指标表/` |
+| 首页feed内容占比 / AB 实验 | **桶映射不写死**：每次写 SQL 先确认对照/实验组完整 `fb_combine_ab_test_id`、是否并 `all-reco-*`、tab/服务线/版本、曝光与 PV 口径。见 [dimensions.md](../dimensions.md) |
+| 卡片曝光/点击 PV（内容feed / 搜索内容卡 / **首页feed 推荐场景周报**） | `COUNT(DISTINCT concat(nvl(fb_expo_id,''),'#',duid))` —— **fb_expo_id × duid 去重**；监控日表另有 `count(1)` 口径 |
 | 卡片 PCTR（搜索横卡） | 点击 PV / 曝光 PV（同上 PV 口径） |
+| **主理人内容分发日指标**（2026-09-11） | 主理人池 `array_contains(content_tag,'curator_content')`，**不限 status**；**五场景整体**卡片曝光/点击 UV·PV、UCTR/PCTR（**暂不含详情页曝光**）；模板 [curator_distribution_daily.md](../templates/curator_distribution_daily.md) |
 
-### 三场景整体（2026-08 confirmed）
+### 五场景整体（2026-08 confirmed）
 
-覆盖：内容feed + 首页feed内容卡 + 搜索结果页内容卡（竖卡+横卡）。
+覆盖：内容feed + 首页feed内容卡 + 搜索结果页内容卡（竖卡+横卡）+ 二手房源详情内容卡 + 小区详情内容卡。
 
 | 项 | 口径 |
 |----|------|
-| 整体曝光/点击 UV | 三场景明细 `UNION ALL` 后 `COUNT(DISTINCT duid)`，**禁止分场景 UV 相加** |
+| 整体曝光/点击 UV | 五场景明细 `UNION ALL` 后 `COUNT(DISTINCT duid)`，**禁止分场景 UV 相加** |
 | 整体曝光/点击 PV | 分场景 PV **之和** |
 | 周报取数模板 | [templates/content_weekly_scene_metrics.md](../templates/content_weekly_scene_metrics.md) |
 
@@ -79,14 +82,14 @@ and duid not in ('-911','null')
 |------|--------|--------|
 | 视频详情页 | community/shipindetail | 57827 |
 | 图文详情页 | new_kandian_article | 83538 |
-| 行情 / 日照 / 航拍 / 漫游 | hangqing_content_app 等 | `1,3` |
+| 行情 / 交易故事 / 日照航拍漫游 / 相似的人等其余新二详情页 | hangqing_content_app 等 | `1,3` |
 
 ### 整体 vs 分场景消费（2026-08 confirmed）
 
 | 粒度 | source 过滤 |
 |------|-------------|
 | **整体** | **不限** `action.source` |
-| **分场景** | 必须按 source 归因：`kandian`/`kanidian`→内容feed；`homepage_feed`→首页feed；`search`→搜索结果页 |
+| **分场景** | 必须按 source 归因：`kandian`/`kanidian`→内容feed；`homepage_feed`→首页feed；`search`→搜索结果页；`ershoudetail`→房源详情；`communitydetail`→小区详情 |
 
 ## 周报展示（2026-08 confirmed）
 

@@ -57,6 +57,8 @@ WHERE pt = '${-1d_pt}'
 | 字段 | 类型 | 含义 | 备注 |
 |------|------|------|------|
 | custdel_id | string | 中台系统客源 id | JOIN 客源表键 |
+| agent_ucid | string | 主经纪人 ucid | **商机成交匹配键**；cast bigint；另有 `agent_list` |
+| agent_name | string | 主经纪人名 | |
 | out_custdel_id | string | 新房客源唯一标识 | 勿与 `custdel_id` 混用 |
 | order_time | string | 认购时间 | 标准成交日：`substr(...,1,10)` |
 | sign_time | string | 网签时间 | 网签口径时用 |
@@ -78,7 +80,9 @@ rpt.rpt_nh_output_deal_info_online_custdel_da.custdel_id
     → customer_uid AS ucid
 ```
 
-- 模板：[templates/deal_ershou_xinfang.md](../templates/deal_ershou_xinfang.md)
+- 模板：
+  - [templates/deal_ershou_xinfang.md](../templates/deal_ershou_xinfang.md)
+  - [templates/sj_deal_matched_daily.md](../templates/sj_deal_matched_daily.md)
 - 客源表：[cdel_custdel_da.md](cdel_custdel_da.md)
 
 ## 已知坑
@@ -90,4 +94,4 @@ rpt.rpt_nh_output_deal_info_online_custdel_da.custdel_id
 
 ## Metrics referencing this table
 
-- [metrics/commerce.md](../metrics/commerce.md)「新房成交」
+- [metrics/commerce.md](../metrics/commerce.md)「新房成交」「商机成交量」

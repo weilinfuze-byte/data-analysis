@@ -38,7 +38,7 @@ count(distinct t3.duid) / count(distinct t2.duid)
 - 表：`rpt.rpt_homepage_feed_flow_di`
 - 曝光分母：`40400 ∩ 54872`（滑动有效曝光）
 - 点击：`40397`
-- 维度：一级 `item_type`、二级 `card_type`
+- 维度：一级 `show_card_type`、二级 `card_type`
 - 去重：**duid**
 - 模板：[templates/homepage_feed_material_ctr.md](../templates/homepage_feed_material_ctr.md)
 
@@ -53,7 +53,7 @@ count(distinct t3.duid) / count(distinct t2.duid)
 
 - 曝光表：`rpt.rpt_comm_log_beike_exp_detail_di`
 - 点击表：`rpt.rpt_log_bi_user_behivor_detail_flow_di`
-- UV：`COUNT(DISTINCT duid)`；PV：`COUNT(1)`（不是 fb_expo_id 去重）
+- UV：`COUNT(DISTINCT duid)`；PV：`COUNT(DISTINCT concat(nvl(fb_expo_id,''),'#',duid))`（推荐场景 **fb_expo_id × duid**，不是 `count(1)`）
 - UCTR = click_uv / expo_uv；PCTR = click_pv / expo_pv
 - 两侧先按日聚合，曝光 LEFT JOIN 点击
 - 模板：[templates/ershou_push_huxing_card_ctr.md](../templates/ershou_push_huxing_card_ctr.md)

@@ -63,7 +63,8 @@ WHERE pt = '${-1d_pt}'
 | 字段 | 类型 | 含义 | 备注 |
 |------|------|------|------|
 | cust_ucid | bigint | 客户 id | 二手侧直接作 `ucid` |
-| sign_time | string | 签约时间 | `substr(...,1,10)` → `sign_date` |
+| sign_ucid | bigint | 签约人 ucid | **商机成交匹配键**；≠ `create_ucid` / `accompany_sign_ucid` |
+| sign_time | string | 签约时间 | `substr(...,1,10)` → 成交日 |
 | is_parent_agreement | tinyint | 是否主协议 | 必滤 =1 |
 | agreement_type_code | int | 协议类型 | `150001001` 合同 |
 | is_commit | tinyint | 是否提交 | 必滤 =1 |
@@ -85,10 +86,13 @@ WHERE pt = '${-1d_pt}'
 
 ## JOIN / 模板
 
-- 模板：[templates/deal_ershou_xinfang.md](../templates/deal_ershou_xinfang.md)
-- 指标：[metrics/commerce.md](../metrics/commerce.md)「二手成交」「租赁成交」
+- 模板：
+  - [templates/deal_ershou_xinfang.md](../templates/deal_ershou_xinfang.md)
+  - [templates/sj_deal_matched_daily.md](../templates/sj_deal_matched_daily.md)
+- 指标：[metrics/commerce.md](../metrics/commerce.md)「新二成交」「商机成交量」「租赁成交」
 
 ## 已知坑
 
 - 表名 `rent` ≠ 只含租赁；买卖必须加 `del_type_name = '买卖'`
+- **无** `agent_ucid` 字段；与商机经纪人匹配用 **`sign_ucid`**
 - `GROUP BY` 写具体字段/表达式，禁止 `1,2,3`

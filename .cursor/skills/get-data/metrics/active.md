@@ -27,14 +27,23 @@
 - 按 feed_type 匹配不同 evt_id（大首页 40400、二手 13942 等）
 - 有效曝光需 JOIN 滑动 evt_id（54872、60251 等）
 
-### 首页feed曝光（硬规则，2026-08）
+### 首页feed曝光（硬规则，2026-09）
 
-- **任何**首页 feed 曝光相关指标（UV / PV / PCTR·UCTR 分母 / 渗透）= `40400 ∩ 54872`
-- **禁止**裸用 `40400` 当曝光
-- 点击仍为 `40397`；PCTR = 点击PV/有效曝光PV，UCTR = 点击UV/有效曝光UV
-- 去重键：**duid**（与内容生态统一，见 [content-ecology.md](content-ecology.md)）
-- 物料维度：一级 `item_type`、二级 `card_type`；先滑动用户集合再 JOIN 40400
-- SQL：[templates/homepage_feed_material_ctr.md](../templates/homepage_feed_material_ctr.md)；埋点 [events/beike_evt_id.md](../events/beike_evt_id.md)
+按场景选口径，**禁止**把一种默认套到所有 SQL：
+
+| 场景 | 曝光 | PV | UV | 点击 |
+|------|------|----|----|------|
+| 周报内容卡 / 物料 CTR | `40400 ∩ 54872` | `fb_expo_id × duid` | `duid` | `40397` |
+| 日常监控日表 | 全量 `40400` **+** 有效 `40400∩54872` | `count(1)` **+** `count(distinct fb_expo_id)` | `duid` | `40397`（不限滑动） |
+| AB / 内容占比 | **每次问用户** | **每次问用户** | `duid` | `40397` |
+
+- 有效曝光：先 `54872` 用户集合（默认不加 tab），再 JOIN `40400`
+- 物料一级：优先 `show_card_type`，空则 `item_type`（监控日表）；周报/物料 CTR 勿把 `item_type` 当一级
+- `tab_id` 空值归并 `推荐`（监控日表 Locked）
+- 内容卡：剔除法，见 [homepage_feed_content_card_filter.md](../docs/homepage_feed_content_card_filter.md)
+- AB 桶映射不写死：见 [dimensions.md](../dimensions.md)
+- 模板 / 项目：物料 CTR → [homepage_feed_material_ctr.md](../templates/homepage_feed_material_ctr.md)；监控日表 → `首页feed指标表/`
+- 埋点：[events/beike_evt_id.md](../events/beike_evt_id.md)
 
 ### 停留时长
 
