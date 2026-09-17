@@ -116,6 +116,10 @@ ORDER BY
 
 **分发日指标（给业务方）**：主理人池 = `array_contains(content_tag,'curator_content')`，**不限 status**；JOIN 五场景卡片曝光/点击（**暂不含详情页曝光**）。优先中间表版，无权限用底表版。模板 [curator_distribution_daily.md](../templates/curator_distribution_daily.md)；项目 SQL：`主理人视频详情页曝光/curator_distribution_daily.sql` / `curator_distribution_daily_base.sql`。
 
+**生产 / 消费日指标（周表）**：同 tag，但 **`status = 4`**；累计投稿主理人数 = 累计 `beikehao_id`；浏览 = 视频57827+图文83538。模板 [curator_metrics_daily.md](../templates/curator_metrics_daily.md)；项目 SQL：`主理人视频详情页曝光/curator_metrics.sql`。
+
+**贝壳号 ODS 校验**：`ods.ods_beike_feed_cms_feed_beikehao_da.id` = 本表 `beikehao_id`，可对两侧 `im_ucid`；见 [ods_beike_feed_cms_feed_beikehao_da.md](ods_beike_feed_cms_feed_beikehao_da.md)。
+
 ## 已知数据质量（2026-08 demo）
 
 - `content_tag` / `content_quality` / `publish_time_on` 曾大量空或 epoch

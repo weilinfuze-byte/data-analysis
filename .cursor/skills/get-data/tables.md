@@ -28,6 +28,7 @@
 | `rpt.rpt_content_resblock_detail_flow_di` | 小区详情页内容流量中间表 | — | [content_resblock_detail_flow_di.md](tables/content_resblock_detail_flow_di.md) |
 | `rpt.rpt_content_ershou_detail_flow_di` | 二手房源详情页内容流量中间表 | — | [content_ershou_detail_flow_di.md](tables/content_ershou_detail_flow_di.md) |
 | `rpt.rpt_feed_content_analyze_table` | 内容中台存量内容底表 | — | [feed_content_analyze_table.md](tables/feed_content_analyze_table.md) |
+| `ods.ods_beike_feed_cms_feed_beikehao_da` | 贝壳号 ODS（校验 beikehao_id / im_ucid） | — | [ods_beike_feed_cms_feed_beikehao_da.md](tables/ods_beike_feed_cms_feed_beikehao_da.md) |
 | `rpt.rpt_log_bi_user_uicode_flow_di` | 页面级 DAU/MAU/停留 | 41 | [uicode_flow_di.md](tables/uicode_flow_di.md) |
 | `rpt.rpt_asm_sj_trans_detail_da` | 商机转化明细表 | 73 | [asm_sj_trans_detail_da.md](tables/asm_sj_trans_detail_da.md) |
 | `rpt.rpt_content_sj_trans_detail_da` | 内容商机明细中间表（三类+全字段） | — | [content_sj_trans_detail_da.md](tables/content_sj_trans_detail_da.md) |

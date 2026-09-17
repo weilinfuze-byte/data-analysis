@@ -48,6 +48,8 @@
 
 **不含**家装物料详情（如 `jiazhuang_video_page_h5` / `ai_case_page` / 设计师物料等）。
 
+> 2026-09-16 对照产品截图：上表详情页 uicode **已全部覆盖**。截图备注里的 `homepage1` / `new_kandian_homepage` / `zonghesousuo_jieguo` 等是**入口 source**，不是详情页 uicode；中间表按详情 uicode 收窄、不限 source，从这些入口进详情的流量仍会进表。
+
 ## 下游可选 source 限制（参考，非中间表过滤）
 
 分场景 / 入口对账时再加；整体消费可不限。

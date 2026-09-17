@@ -25,5 +25,6 @@
 | [homepage_feed_material_ctr.md](homepage_feed_material_ctr.md) | 首页feed 一级×二级物料 PCTR/UCTR |
 | [content_weekly_scene_metrics.md](content_weekly_scene_metrics.md) | 内容卡片周报：整体/分场景日指标 + Excel 表样 |
 | [curator_distribution_daily.md](curator_distribution_daily.md) | 主理人内容分发日指标（中间表版 / 底表版） |
+| [curator_metrics_daily.md](curator_metrics_daily.md) | 主理人生产 / 消费日指标（周表 Excel 规则） |
 
 新增模板时在此注册，并在 [SKILL.md](../SKILL.md) Locked Templates 表同步。

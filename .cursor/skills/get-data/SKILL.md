@@ -201,6 +201,7 @@ client_app_version, city_code, city_name, business_name
 | 首页feed物料 PCTR/UCTR（一级×二级） | [templates/homepage_feed_material_ctr.md](templates/homepage_feed_material_ctr.md) |
 | 内容卡片周报（整体/分场景日指标） | [templates/content_weekly_scene_metrics.md](templates/content_weekly_scene_metrics.md) |
 | 主理人内容分发日指标（中间表/底表） | [templates/curator_distribution_daily.md](templates/curator_distribution_daily.md) |
+| 主理人生产 / 消费日指标 | [templates/curator_metrics_daily.md](templates/curator_metrics_daily.md) |
 
 ## 输出规范
 

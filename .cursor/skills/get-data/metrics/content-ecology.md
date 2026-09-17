@@ -39,6 +39,8 @@ and duid not in ('-911','null')
 | 卡片曝光/点击 PV（内容feed / 搜索内容卡 / **首页feed 推荐场景周报**） | `COUNT(DISTINCT concat(nvl(fb_expo_id,''),'#',duid))` —— **fb_expo_id × duid 去重**；监控日表另有 `count(1)` 口径 |
 | 卡片 PCTR（搜索横卡） | 点击 PV / 曝光 PV（同上 PV 口径） |
 | **主理人内容分发日指标**（2026-09-11） | 主理人池 `array_contains(content_tag,'curator_content')`，**不限 status**；**五场景整体**卡片曝光/点击 UV·PV、UCTR/PCTR（**暂不含详情页曝光**）；模板 [curator_distribution_daily.md](../templates/curator_distribution_daily.md) |
+| **主理人生产 / 消费日指标**（2026-09） | 池子同上但 **`status=4`**；当日/累计生产量、累计投稿主理人数；浏览 = 视频57827+图文83538；周表 Excel 规则见模板 [curator_metrics_daily.md](../templates/curator_metrics_daily.md) |
+| 首页feed 内容占比推全期 | 全量已切实验策略时**禁止**再做对照/内容/房源组间对比；看整体占比 vs 目标 + 护栏，分桶仅做同构校验。见 [dimensions.md](../dimensions.md) |
 
 ### 五场景整体（2026-08 confirmed）
 
