@@ -1,7 +1,7 @@
 # 内容生态流量中间表 ETL（Locked）
 
 > as of 2026-09-11。底表太大，先落中间表再分析。
-> 完整 SQL：`内容生态指标体系/content_detail_flow.sql`、`search_result_flow.sql`、`content_feed_flow.sql`、`homepage_feed_flow.sql`、`content_ershou_detail_flow.sql`、`content_resblock_detail_flow.sql`
+> 完整 SQL：`内容生态指标体系/中间表/content_detail_flow.sql`、`search_result_flow.sql`、`content_feed_flow.sql`、`homepage_feed_flow.sql`、`content_ershou_detail_flow.sql`、`content_resblock_detail_flow.sql`
 > App 发版 / 新旧 uicode 并行：`docs/app-version-uicode-migration.md`（**禁止**用 `active_date` 切 uicode/evt）
 
 ## 通用壳
@@ -52,13 +52,21 @@ lower(uicode) IN (
 
 ```sql
 -- 行为表
-lower(uicode) = 'zonghesousuo/jieguo'
+lower(uicode) IN (
+    'zonghesousuo/jieguo'   -- 首页搜索
+    ,'ershousousuo/jieguo'  -- 二手搜索
+)
 AND evt_id IN ('80327', '93751', '1,3', '1,4')
 
 -- 曝光表
-lower(uicode) = 'zonghesousuo/jieguo'
+lower(uicode) IN (
+    'zonghesousuo/jieguo'
+    ,'ershousousuo/jieguo'
+)
 AND evt_id IN ('80326', '93750')
 ```
+
+埋点相同，用落表列 `uicode` 区分页面。只要首页搜索的下游加 `lower(uicode) = 'zonghesousuo/jieguo'`。
 
 ### UNION 分流规则（内容卡片 + 页览）
 
@@ -72,12 +80,9 @@ AND evt_id IN ('80326', '93750')
 
 ### 落表时从 action 预解析
 
-竖卡与横卡 action key 不同，**按 evt_id 区分**：
+`content_id` 按 evt_id 区分：80326/80327 用 `$.fb_item_id`，93750/93751 用 `$.content_id`。
 
-| 表字段 | 80326/80327 | 93750/93751 |
-|--------|-------------|-------------|
-| item_type | `$.item_type` | `$.fb_item_type` |
-| content_id | `$.fb_item_id` | `$.content_id` |
+**一级分类 `item_type`（2026-10-14）**：先 `$.show_card_type`；空（`NULL` / `''` / `-911` / `null`）时，93750/93751 用 `$.fb_item_type`，其余用 `$.item_type`。`show_card_type` 与搜索 `item_type` 不是同一套枚举。点后推仍用底表 `$.item_type`，不用本表落表列。
 
 落表字段在最终 SELECT 解析（Tez：先 UNION 收窄，再 get_json_object）；过滤条件才在分支 WHERE 解析。
 
@@ -105,7 +110,7 @@ lower(uicode) IN ('new_kandian_homepage', 'content/kandian/recommend')
 
 | 表字段 | action key |
 |--------|------------|
-| item_type | `$.fb_item_type` |
+| item_type | `$.fb_item_type`（旧一级，兼容） |
 | card_type | `$.card_type` |
 | share_media | `$.business_type` |
 | action_date | `$.action_date` |
@@ -114,6 +119,10 @@ lower(uicode) IN ('new_kandian_homepage', 'content/kandian/recommend')
 | content_tag | `$.content_title` |
 | beike_id | `$.beike_id` |
 | agent_ucid | `$.agent_ucid` |
+| **show_card_type** | `$.show_card_type`（**一级分类现行**；表尾追加） |
+
+- 下游一级维优先 `show_card_type`，空则 `item_type`
+- 已建表：`ALTER TABLE ... ADD COLUMNS (show_card_type ...)`，禁止删字段/改顺序
 
 表说明：[tables/content_feed_flow_di.md](../tables/content_feed_flow_di.md)
 

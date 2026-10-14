@@ -1,9 +1,9 @@
 # 内容卡片周报 · 整体 / 分场景日指标（Locked）
 
-> as of 2026-08-13
-> 项目 SQL：`内容生态指标体系/weekly_feed_scene_metrics.sql`（**仅日明细**）  
-> Excel：`内容生态指标体系/generate_weekly_report_excel.py`（**周度日均**）  
-> 周报表：`内容生态指标体系/内容生态_用户层面_周报_分场景.xlsx`
+> as of 2026-09-18
+> 项目 SQL：`内容生态指标体系/周报/weekly_feed_scene_metrics.sql`（**仅日明细**）  
+> Excel：`内容生态指标体系/周报/generate_weekly_report_excel.py`（**周度日均**）  
+> 周报表：`内容生态指标体系/周报/内容生态_用户层面_周报_分场景.xlsx`
 
 ## 触发
 
@@ -23,10 +23,10 @@
 | scene | 中间表 | 曝光 | 点击 | PV |
 |-------|--------|------|------|-----|
 | `content_feed` | `rpt.rpt_content_feed_flow_di` | 94408 / 68193 | 94409 / 68194 | `fb_expo_id × duid` |
-| `homepage_feed` | `rpt.rpt_homepage_feed_flow_di` | **40400 ∩ 54872** + `tab_id = '推荐'` + **card_type 剔除法** | 40397 + 同 tab / 剔除法 | **`fb_expo_id × duid`**（推荐场景；勿再用 `count(1)`） |
-| `search_result` | `rpt.rpt_content_search_result_flow_di` | 80326（`contentFeed`/`contentCardModule`）∪ 93750 | 80327 同 module ∪ 93751 | `fb_expo_id × duid` |
+| `homepage_feed` | `rpt.rpt_homepage_feed_flow_di` | **40400 ∩ 54872** + `tab_id = '推荐'` + **card_type 剔除法** + **`item_type NOT IN ('xinfang_project_name','ershou_house')`** | 40397 + 同 tab / 剔除法 / item_type | **`fb_expo_id × duid`**（推荐场景；勿再用 `count(1)`） |
+| `search_result` | `rpt.rpt_content_search_result_flow_di` | 80326（`contentFeed`/`contentCardModule`）∪ 93750 | 80327 同 module ∪ 93751 | `fb_expo_id × duid`。2026-10-14 起表内含二手搜索 `ershousousuo/jieguo`；本场景要保持首页搜索须 `lower(uicode)='zonghesousuo/jieguo'` |
 
-首页 feed 内容卡 **`card_type` 剔除法**（禁止白名单）：`card_type IS NOT NULL` 且不在 35 类非内容黑名单；名单外新类型算内容。完整名单见 [docs/homepage_feed_content_card_filter.md](../docs/homepage_feed_content_card_filter.md)。
+首页 feed 内容卡（禁止白名单）：`card_type IS NOT NULL` 且不在 35 类非内容黑名单，且 `item_type NOT IN ('xinfang_project_name','ershou_house')`。完整名单见 [docs/homepage_feed_content_card_filter.md](../docs/homepage_feed_content_card_filter.md)。
 
 ## 整体 vs 分场景
 
@@ -41,11 +41,18 @@
 ```sql
 AND (
      (lower(uicode) = 'community/shipindetail' AND evt_id = '57827')
-  OR (lower(uicode) = 'new_kandian_article' AND evt_id = '83538')
   OR (
          lower(uicode) IN (
-             'hangqing_content_app','csxx_light','csxx_3ddetailpage'
-             ,'lightshadow','overall','panorama1'
+             'new_kandian_article'
+             ,'hangqing_content_app'
+             ,'jiaoyi_gushi'
+             ,'sunshine_content'
+             ,'usershowing_detail'
+             ,'csxx_light'
+             ,'csxx_3ddetailpage'
+             ,'lightshadow'
+             ,'overall'
+             ,'panorama1'
          )
      AND evt_id = '1,3'
   )
@@ -60,12 +67,12 @@ AND (
 
 | 步骤 | 产物 | 说明 |
 |------|------|------|
-| 1. SQL | `weekly_feed_scene_metrics.sql` | **仅日粒度** `active_date × scene`；窗口默认近 7 天（`pt between '${-7d_pt}' and '${-1d_pt}'`） |
+| 1. SQL | `周报/weekly_feed_scene_metrics.sql` | **仅日粒度** `active_date × scene`；窗口默认近 7 天（`pt between '${-7d_pt}' and '${-1d_pt}'`） |
 | 2. 导出 | 工厂下载 `.xlsx` | 列：`active_date, scene, expo_uv, …` |
 | 3. Excel | `generate_weekly_report_excel.py` | 合并日明细 → 按**周五–周四**算**周度日均** → 写入 `内容生态_用户层面_周报_整体.xlsx` / `分场景.xlsx` |
 
 ```bash
-python3 内容生态指标体系/generate_weekly_report_excel.py /path/to/export.xlsx
+python3 内容生态指标体系/周报/generate_weekly_report_excel.py /path/to/export.xlsx
 ```
 
 - **周度日均**（在 Excel 脚本内计算，SQL 不做）：

@@ -68,7 +68,7 @@ uicode 配对：`homepage1`, `newhouse/homepage(v2)`, `homepage/ershou_homev2`, 
 |------|--------|-------------|-------------|-------------|
 | 内容Feeds | `new_kandian_homepage`, `content/kandian/recommend` | `94408`, `68193` | `94409`, `68194` | 无；中间表捞**全部 evt**，见下方 |
 | 首页feed（大首页推荐） | `homepage1` | `40400` ∩ `54872` | `40397` | 曝光一律滑动有效曝光；内容卡用 `card_type` **剔除法**（见 [homepage_feed_content_card_filter.md](../docs/homepage_feed_content_card_filter.md)）；中间表 `content_tag`←`$.content_tag`（≠ 内容 feed 的 `$.content_title`） |
-| 搜索结果页 | `zonghesousuo/jieguo` | 见下方 | 见下方 | `tab_name` + `module_type` |
+| 搜索结果页 | `zonghesousuo/jieguo`（首页搜索）、`ershousousuo/jieguo`（二手搜索） | 见下方 | 见下方 | `tab_name` + `module_type`；两页埋点相同，中间表用 `uicode` 区分 |
 | 二手详情页-头部+底部推荐 | `ershou/detail` | `80579`, `87223` | `80580`, `87222` | 头部 `$.source_type` 白名单；底部剔 `$.from`×`$.card_type`；中间表 `rpt.rpt_content_ershou_detail_flow_di` |
 | 小区详情页-头部+底部推荐 | `communitydetailv2` | `28737`, `82883` | `28738`, `82884` | `28737/28738` 过滤 `$.source_type`；`82883/82884` 剔除 `$.card_type` |
 
@@ -99,7 +99,9 @@ uicode 配对：`homepage1`, `newhouse/homepage(v2)`, `homepage/ershou_homev2`, 
 
 > 中间表 `rpt.rpt_content_search_result_flow_di`；完整规则 [tables/content_search_result_flow_di.md](../tables/content_search_result_flow_di.md)
 >
-> 内容横卡/竖卡口径走中间表。**点后推二导新户型卡**不走本表，见上一节。
+> 内容横卡/竖卡口径走中间表。页面：首页搜索 `zonghesousuo/jieguo`、二手搜索 `ershousousuo/jieguo`（2026-10-14）。**点后推二导新户型卡**不走本表，见上一节。
+>
+> 落表一级 `item_type`：先 `$.show_card_type`，空（`NULL`/`''`/`-911`/`null`）再按 evt 回退（93750/93751 → `$.fb_item_type`，其余 → `$.item_type`）。三套 key 枚举不同。
 
 | 场景 | tab_name | module_type | 曝光 | 点击 |
 |------|----------|-------------|------|------|
@@ -116,7 +118,7 @@ uicode 配对：`homepage1`, `newhouse/homepage(v2)`, `homepage/ershou_homev2`, 
 | 页面 | uicode | 页面曝光 evt_id |
 |------|--------|----------------|
 | 视频详情页 | community/shipindetail | 57827 |
-| 图文详情页 | new_kandian_article | 83538 |
+| 图文详情页 | new_kandian_article | 1,3（原 83538 已弃用） |
 | 其余新二内容详情页 | hangqing_content_app / jiaoyi_gushi 等 | 1,3 |
 
 ### 小区详情页头部+底部推荐（2026-08-13 confirmed）
@@ -176,8 +178,9 @@ LIMIT 100
 | $.source_type | 探房/业主vlog/房源视频/业主讲房/视频；视频/街访/解读/探房 | 二手详情**头部**白名单；小区详情页头部推荐 |
 | $.from | 内容 / 二手 / 新房 | 二手详情页**底部**推荐来源；落表列名 `from_val` |
 | $.card_type | 视频类/业主自荐/小区点评/房源卡片/新房楼盘/土拍 等；小区详情底部剔除 xinfang_project_name/ershou_house/resblock/resblock_rankinglist | 首页feed；二手详情底部与 `$.from` 组合剔除；小区详情底部剔除 |
-| $.item_type | 二导新户型卡 | 搜索结果页 80326/80327 点后推物料；≠ 首页feed 一级 `$.show_card_type`（旧 `$.fb_item_type`） |
-| $.show_card_type | （枚举见埋点表） | 首页feed **一级分类**；落表 `show_card_type` |
+| $.item_type | 二手在售房源 / 二导新户型卡 / 小区点评 | 搜索 80326/80327 的搜索结果类型；点后推筛 `'二导新户型卡'`。≠ 推荐一级 `$.show_card_type` |
+| $.show_card_type | 经纪人视频 / 主理人内容-视频 / 行情数据 / 二手日照 | 推荐现行一级。首页 feed 落表 `show_card_type`；搜索中间表一级优先取它，空再回退 `$.item_type` / `$.fb_item_type` |
+| $.fb_item_type | 经纪人视频 / ershou_house / xinfang_frame_id / 行情数据 | 推荐旧一级。搜索 80326 上约 1.4% 有值；93750 几乎为空 |
 | $.tab_id | 推荐 / … | 首页feed tab；落表 `tab_id`；周报内容卡默认 **`= '推荐'`**（仅 40400/40397；54872 不加）；AB 是否限 tab **每次确认** |
 | $.content_tag | （标签串） | 首页feed 中间表落表 `content_tag`（2026-09-11；旧 ETL 误用 `$.content_title`） |
 | $.content_title | （展示文案） | 内容 feed 中间表落表 `content_tag`；**不是**首页feed 现行 key |

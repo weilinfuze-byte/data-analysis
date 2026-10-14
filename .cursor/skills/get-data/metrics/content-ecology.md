@@ -39,7 +39,7 @@ and duid not in ('-911','null')
 | 卡片曝光/点击 PV（内容feed / 搜索内容卡 / **首页feed 推荐场景周报**） | `COUNT(DISTINCT concat(nvl(fb_expo_id,''),'#',duid))` —— **fb_expo_id × duid 去重**；监控日表另有 `count(1)` 口径 |
 | 卡片 PCTR（搜索横卡） | 点击 PV / 曝光 PV（同上 PV 口径） |
 | **主理人内容分发日指标**（2026-09-11） | 主理人池 `array_contains(content_tag,'curator_content')`，**不限 status**；**五场景整体**卡片曝光/点击 UV·PV、UCTR/PCTR（**暂不含详情页曝光**）；模板 [curator_distribution_daily.md](../templates/curator_distribution_daily.md) |
-| **主理人生产 / 消费日指标**（2026-09） | 池子同上但 **`status=4`**；当日/累计生产量、累计投稿主理人数；浏览 = 视频57827+图文83538；周表 Excel 规则见模板 [curator_metrics_daily.md](../templates/curator_metrics_daily.md) |
+| **主理人生产 / 消费日指标**（2026-09） | 池子同上但 **`status=4`**；当日/累计生产量、累计投稿主理人数；浏览 = 视频57827+图文`1,3`；周表 Excel 规则见模板 [curator_metrics_daily.md](../templates/curator_metrics_daily.md) |
 | 首页feed 内容占比推全期 | 全量已切实验策略时**禁止**再做对照/内容/房源组间对比；看整体占比 vs 目标 + 护栏，分桶仅做同构校验。见 [dimensions.md](../dimensions.md) |
 
 ### 五场景整体（2026-08 confirmed）
@@ -54,8 +54,10 @@ and duid not in ('-911','null')
 
 ### 搜索结果页内容横卡（2026-08 confirmed）
 
-- 中间表：`rpt.rpt_content_search_result_flow_di`
+- 中间表：`rpt.rpt_content_search_result_flow_di`（首页搜索 `zonghesousuo/jieguo` + 二手搜索 `ershousousuo/jieguo`，2026-10-14）
+- 只要首页搜索：`lower(uicode) = 'zonghesousuo/jieguo'`
 - 横卡 = 综合 tab + `contentCardModule`（80326/80327）∪ 旧埋点 93750/93751
+- 一级分类落表列 `item_type`：先 `show_card_type`，空再按 evt 回退
 - 模板：[templates/search_content_card_ctr.md](../templates/search_content_card_ctr.md)
 - 周报「搜索结果页内容卡片」= **竖卡+横卡**（`contentFeed` + `contentCardModule` + 93750/93751），不是仅横卡
 
@@ -83,7 +85,7 @@ and duid not in ('-911','null')
 | 页面 | uicode | evt_id |
 |------|--------|--------|
 | 视频详情页 | community/shipindetail | 57827 |
-| 图文详情页 | new_kandian_article | 83538 |
+| 图文详情页 | new_kandian_article | `1,3` |
 | 行情 / 交易故事 / 日照航拍漫游 / 相似的人等其余新二详情页 | hangqing_content_app 等 | `1,3` |
 
 ### 整体 vs 分场景消费（2026-08 confirmed）

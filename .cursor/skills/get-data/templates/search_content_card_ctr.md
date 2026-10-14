@@ -1,8 +1,8 @@
 # 搜索结果页内容横卡 CTR（Locked）
 
 > 从中间表 `rpt.rpt_content_search_result_flow_di` 聚合，不扫底表。
-> 项目 SQL：`内容生态指标体系/search_content_card_ctr.sql`
-> as of 2026-08-05
+> 项目 SQL：`内容生态指标体系/取数/search_content_card_ctr.sql`
+> as of 2026-10-14。中间表含首页搜索与二手搜索；本模板历史口径是首页搜索，取数加 `lower(uicode) = 'zonghesousuo/jieguo'`。未回刷分区只有首页搜索，加这层过滤不影响旧分区。
 
 ## 横卡口径
 

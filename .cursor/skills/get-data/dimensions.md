@@ -73,7 +73,7 @@
 | 首页feed tab | 落表 `tab_id`（底表 ETL 时 `get_json_object(action,'$.tab_id')`） | 中间表下游**直接用 `tab_id`**；**推荐 tab 分析默认 `= '推荐'`** |
 | 首页feed AB 标识 | `get_json_object(action,'$.fb_combine_ab_test_id')` | 中间表若未落表则扫 `action`；**禁止 LIKE**，用完整值 `IN (...)` |
 | 首页feed 服务线 | `get_json_object(action,'$.fb_combine_service_id')` | 如 `c006`；是否过滤**每次确认** |
-| 搜索结果页物料类型 | `get_json_object(action,'$.item_type')` | 80326/80327；点后推筛 `'二导新户型卡'` |
+| 搜索结果页一级分类 | 落表 `item_type`：先 `$.show_card_type`，空则 93750/93751 用 `$.fb_item_type`、其余用 `$.item_type` | 2026-10-14；与推荐 `show_card_type` 对齐优先。点后推仍筛底表 `$.item_type='二导新户型卡'` |
 | 首页feed内容体裁 | `get_json_object(action,'$.type')` | 落表字段 `share_media`；≠ 搜索的 `$.share_media` |
 | 首页feed内容id | `get_json_object(action,'$.content_id')` | 落表字段 `content_id`；≠ 搜索竖卡的 `$.fb_item_id` |
 
@@ -163,7 +163,8 @@ Lower(uicode) IN ('homepage1', 'homepage/ershou_homev2')
 |------|-------|--------|
 | 内容Feeds | `content_feeds` | `new_kandian_homepage`, `content/kandian/recommend` |
 | 首页feed（大首页推荐） | `homepage_feed` | `homepage1` |
-| 搜索结果页 | `search_result` | `zonghesousuo/jieguo` |
+| 首页搜索结果页 | `search_result` | `zonghesousuo/jieguo` |
+| 二手搜索结果页 | 同中间表，用 `uicode` 区分 | `ershousousuo/jieguo` |
 | 二手详情页-头部+底部推荐 | `ershou_detail_recom` | `ershou/detail` |
 | 小区详情页-头部+底部推荐 | `resblock_detail_recom` | `communitydetailv2` |
 | 整体 | `overall` | 不区分 `scene`（跨场景去重） |
@@ -199,7 +200,7 @@ Lower(uicode) IN ('homepage1', 'homepage/ershou_homev2')
 
 ## 搜索结果页 tab / module（2026-08 confirmed）
 
-> 中间表：`rpt.rpt_content_search_result_flow_di`。见 [tables/content_search_result_flow_di.md](tables/content_search_result_flow_di.md)
+> 中间表：`rpt.rpt_content_search_result_flow_di`（首页搜索 + 二手搜索，2026-10-14）。见 [tables/content_search_result_flow_di.md](tables/content_search_result_flow_di.md)
 
 - 一级 tab：`action.tab_name`（如 综合、内容、评测）
 - 卡片类型：`action.module_type`（内容相关：`contentFeed`、`contentCardModule`）
